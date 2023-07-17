@@ -1,0 +1,17 @@
+{
+	"setconfig" : "# To exclude a mod from the update, add the name (with extension) of the mod's zip file after = (ONE per line)",
+	"title" : "Vintage Story Mod Updater (by Laerinok).",
+	"err_list" : "No mods in the Mods folder.\nThe program will stop.",
+	"compver1" : "installed version : ",
+	"compver2" : "last version : ",
+	"compver3" : "File size : ",
+	"compver3a" : "MB",
+	"compver4" : "download in progress...",
+	"summary1" : "End of search.",
+	"summary2" : "The following mods have been updated:",
+	"summary3" : "End of search.",
+	"summary4" : "The following mod has been updated:",
+	"summary5" : "No updates available.",
+	"summary6" : "The following mod is excluded from the update : ",
+	"summary7" : "The following mods are excluded from the update : "	
+}
