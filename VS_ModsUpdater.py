@@ -4,7 +4,7 @@
 Gestion des mods de Vintage Story :
 - Liste les mods installés et vérifie s'il existe une version plus récente et la télécharge
 """
-__author__ = "Jay"
+__author__ = "Laerinok"
 __date__ = "2023-07-16"
 
 
