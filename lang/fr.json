@@ -13,5 +13,7 @@
 	"summary4" : "Le mod suivant a été mis à jour : ",
 	"summary5" : "Aucune mise à jour disponible.",
 	"summary6" : "Le mod suivant est exclu de la mise à jour : ",
-	"summary7" : "Les mods suivants sont exclus de la mise à jour :"	
+	"summary7" : "Les mods suivants sont exclus de la mise à jour :",
+	"Error_modid" : "Le moddeur n'a pas renseigné le modid dans le fichier modinfo.json. Impossible de récupérer la mise à jour.",
+	"Error" : "ERREUR"
 }

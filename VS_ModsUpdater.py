@@ -68,6 +68,8 @@ with open(file_lang_path, "r", encoding='utf-8-sig') as lang_json:
     summary5 = desc['summary5']
     summary6 = desc['summary6']
     summary7 = desc['summary7']
+    Error_modid = desc['Error_modid']
+    Error = desc['Error']
 
 # Définition des listes
 mod_filename = []
@@ -165,10 +167,21 @@ def compversion(v1, v2):
     arr2 = v2.split(".")
     n = len(arr1)
     m = len(arr2)
+    try:
+        # converts to integer from string
+        arr1 = [int(i) for i in arr1]
+        arr2 = [int(i) for i in arr2]
+    except ValueError:
+        regex_ver = '([\d*.]*)(\W[\S]*)'
+        result_v1 = re.search(regex_ver, v1)
+        result_v2 = re.search(regex_ver, v2)
+        v1 = result_v1[0]
+        v2 = result_v2[0]
 
-    # converts to integer from string
-    arr1 = [int(i) for i in arr1]
-    arr2 = [int(i) for i in arr2]
+        arr1 = v1.split(".")
+        arr2 = v2.split(".")
+        n = len(arr1)
+        m = len(arr2)
 
     # compares which list is bigger and fills
     # smaller list with zero (for unequal delimiters)
@@ -247,7 +260,9 @@ for mod_maj in liste_mod_maj:
     except urllib.error.URLError as e:
         # Affiche de l'erreur si le lien n'est pas valide
         print(e.reason)
-
+    except KeyError as err:
+        # print(err.args)  # pour debuggage
+        print(f'[red]{Error} !!! - {modname_value} - {Error_modid}[/red]')
 
 # Résumé de la maj
 if nb_maj > 1:
