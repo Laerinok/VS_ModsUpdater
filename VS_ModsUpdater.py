@@ -5,7 +5,7 @@ Gestion des mods de Vintage Story :
 - Liste les mods installés et vérifie s'il existe une version plus récente et la télécharge
 """
 __author__ = "Laerinok"
-__date__ = "2023-07-16"
+__date__ = "2023-07-19"
 
 
 import configparser
@@ -115,38 +115,54 @@ def json_correction(txt_json):
 
 
 def extract_modinfo(file):
-    # On extrait le fichier modinfo.json de l'archive et on recupere le modid, name et version
-    zipfilepath = os.path.join(PATH_MODS, file)
-    if zipfile.is_zipfile(zipfilepath):  # Vérifie si fichier est un Zip valide
-        archive = zipfile.ZipFile(zipfilepath, 'r')
-        archive.extract('modinfo.json', PATH_TEMP)
-        zipfile.ZipFile.close(archive)
-    json_file_path = os.path.join(PATH_TEMP, "modinfo.json")
-    with open(json_file_path, "r", encoding='utf-8-sig') as fichier_json:  # place le contenu du fichier dans une variable pour le tester ensuite avec regex
-        content_file = fichier_json.read()
-    with open(json_file_path, "r", encoding='utf-8-sig') as fichier_json:
-        try:
-            des = json.load(fichier_json)
-            regex_name = r'name'
-            result_name = re.search(regex_name, content_file, flags=re.IGNORECASE)
-            regex_modid = r'modid'
-            result_modid = re.search(regex_modid, content_file, flags=re.IGNORECASE)
-            regex_version = r'version'
-            result_version = re.search(regex_version, content_file, flags=re.IGNORECASE)
-            mod_name = des[result_name.group()]
-            mod_modid = des[result_modid.group()]
-            mod_version = des[result_version.group()]
-        except Exception:
-            json_correct = json_correction(content_file)
-            mod_name = json_correct[0]
-            mod_version = json_correct[1]
-            mod_modid = json_correct[2]
-    return mod_name, mod_modid, mod_version, zipfilepath
+    filepath = ''
+    # On trie les fichiers .zip et .cs
+    type_file = os.path.splitext(file)[1]
+    if type_file == '.zip':
+        # On extrait le fichier modinfo.json de l'archive et on recupere le modid, name et version
+        filepath = os.path.join(PATH_MODS, file)
+        if zipfile.is_zipfile(filepath):  # Vérifie si fichier est un Zip valide
+            archive = zipfile.ZipFile(filepath, 'r')
+            archive.extract('modinfo.json', PATH_TEMP)
+            zipfile.ZipFile.close(archive)
+        json_file_path = os.path.join(PATH_TEMP, "modinfo.json")
+        with open(json_file_path, "r", encoding='utf-8-sig') as fichier_json:  # place le contenu du fichier dans une variable pour le tester ensuite avec regex
+            content_file = fichier_json.read()
+        with open(json_file_path, "r", encoding='utf-8-sig') as fichier_json:
+            try:
+                des = json.load(fichier_json)
+                regex_name = r'name'
+                result_name = re.search(regex_name, content_file, flags=re.IGNORECASE)
+                regex_modid = r'modid'
+                result_modid = re.search(regex_modid, content_file, flags=re.IGNORECASE)
+                regex_version = r'version'
+                result_version = re.search(regex_version, content_file, flags=re.IGNORECASE)
+                mod_name = des[result_name.group()]
+                mod_modid = des[result_modid.group()]
+                mod_version = des[result_version.group()]
+            except Exception:
+                json_correct = json_correction(content_file)
+                mod_name = json_correct[0]
+                mod_version = json_correct[1]
+                mod_modid = json_correct[2]
+    elif type_file == '.cs':
+        filepath = os.path.join(PATH_MODS, file)
+        with open(filepath, "r", encoding='utf-8-sig') as fichier_cs:
+            cs_file = fichier_cs.read()
+            regexp_name = '(Modinfo\(\")([\w]*)\"'
+            result_name = re.search(regexp_name, cs_file, flags=re.IGNORECASE)
+            regexp_version = '(Version\s=\s\")([\d.]*)\"'
+            result_version = re.search(regexp_version, cs_file, flags=re.IGNORECASE)
+            mod_name = result_name[2]
+            mod_version = result_version[2]
+            mod_modid = mod_name
+    return mod_name, mod_modid, mod_version, filepath
 
 
 def liste_complete_mods():
     # On crée la liste contenant les noms des fichiers zip
     regex_filename = ''
+    regex_filename_cs = ''
     for elem in glob.glob(PATH_MODS + "\*.zip"):
         if PATH_MODS == PATH_MODS_VANILLA:
             regex_filename = r'.*\\Mods\\(.*)'
@@ -154,6 +170,14 @@ def liste_complete_mods():
             regex_filename = r'.*\\(.*)'
         result_filename = re.search(regex_filename, elem, flags=re.IGNORECASE)
         mod_filename.append(result_filename.group(1))
+    # On ajoute les fichiers .cs
+    for elem_cs in glob.glob(PATH_MODS + "\*.cs"):
+        if PATH_MODS == PATH_MODS_VANILLA:
+            regex_filename_cs = r'.*\\Mods\\(.*)'
+        elif PATH_MODS == PATH_MODS_VSLAUNCHER:
+            regex_filename_cs = r'.*\\(.*)'
+        result_filename_cs = re.search(regex_filename_cs, elem_cs, flags=re.IGNORECASE)
+        mod_filename.append(result_filename_cs.group(1))
     if len(mod_filename) == 0:
         print(f"{err_list}")
         os.system("pause")
@@ -262,7 +286,7 @@ for mod_maj in liste_mod_maj:
         print(e.reason)
     except KeyError as err:
         # print(err.args)  # pour debuggage
-        print(f'[red]{Error} !!! - {modname_value} - {Error_modid}[/red]')
+        print(f'[green]{modname_value}[/green]: [red]{Error} !!! {Error_modid}[/red]')
 
 # Résumé de la maj
 if nb_maj > 1:
