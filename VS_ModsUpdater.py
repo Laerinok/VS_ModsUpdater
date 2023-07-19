@@ -86,6 +86,7 @@ mods_updated = {}
 
 # Définition des variables
 nb_maj = 0
+num_version = '1.0.2'
 
 
 def set_config_ini():
@@ -270,7 +271,7 @@ config_path = config_read.get('ModPath', 'path')
 PATH_MODS = config_path
 
 # *** Texte d'accueil ***
-print(f'\n\n\t\t\t[bold cyan]{title}[/bold cyan]')
+print(f'\n\n\t\t\t[bold cyan]{title} - {num_version}[/bold cyan]')
 print('\t\t\thttps://mods.vintagestory.at/list/mod\n\n')
 
 # On crée la liste des mods à exclure de la maj
