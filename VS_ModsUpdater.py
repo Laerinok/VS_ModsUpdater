@@ -1,14 +1,17 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Gestion des mods de Vintage Story :
+Gestion des mods de Vintage Story v.1.0.2:
 - Liste les mods installés et vérifie s'il existe une version plus récente et la télécharge
+- Affiche le résumé
+- Crée un fichier updates.log
 """
 __author__ = "Laerinok"
-__date__ = "2023-07-16"
+__date__ = "2023-07-19"
 
 
 import configparser
+import datetime
 import glob
 import json
 import locale
@@ -20,7 +23,9 @@ import urllib.error
 import zipfile
 import requests
 import wget
+from bs4 import BeautifulSoup
 from rich import print
+
 
 # Définition des chemins
 PATH_CONFIG = os.path.join(os.getenv('APPDATA'), 'VintagestoryData', 'ModConfig', 'ModsUpdate')
@@ -70,14 +75,18 @@ with open(file_lang_path, "r", encoding='utf-8-sig') as lang_json:
     summary7 = desc['summary7']
     Error_modid = desc['Error_modid']
     Error = desc['Error']
+    last_update = desc['last_update']
 
 # Définition des listes
 mod_filename = []
 mods_exclu = []
-mods_updated = []
+
+# Définition des dico
+mods_updated = {}
 
 # Définition des variables
 nb_maj = 0
+num_version = '1.0.2'
 
 
 def set_config_ini():
@@ -115,38 +124,54 @@ def json_correction(txt_json):
 
 
 def extract_modinfo(file):
-    # On extrait le fichier modinfo.json de l'archive et on recupere le modid, name et version
-    zipfilepath = os.path.join(PATH_MODS, file)
-    if zipfile.is_zipfile(zipfilepath):  # Vérifie si fichier est un Zip valide
-        archive = zipfile.ZipFile(zipfilepath, 'r')
-        archive.extract('modinfo.json', PATH_TEMP)
-        zipfile.ZipFile.close(archive)
-    json_file_path = os.path.join(PATH_TEMP, "modinfo.json")
-    with open(json_file_path, "r", encoding='utf-8-sig') as fichier_json:  # place le contenu du fichier dans une variable pour le tester ensuite avec regex
-        content_file = fichier_json.read()
-    with open(json_file_path, "r", encoding='utf-8-sig') as fichier_json:
-        try:
-            des = json.load(fichier_json)
-            regex_name = r'name'
-            result_name = re.search(regex_name, content_file, flags=re.IGNORECASE)
-            regex_modid = r'modid'
-            result_modid = re.search(regex_modid, content_file, flags=re.IGNORECASE)
-            regex_version = r'version'
-            result_version = re.search(regex_version, content_file, flags=re.IGNORECASE)
-            mod_name = des[result_name.group()]
-            mod_modid = des[result_modid.group()]
-            mod_version = des[result_version.group()]
-        except Exception:
-            json_correct = json_correction(content_file)
-            mod_name = json_correct[0]
-            mod_version = json_correct[1]
-            mod_modid = json_correct[2]
-    return mod_name, mod_modid, mod_version, zipfilepath
+    filepath = ''
+    # On trie les fichiers .zip et .cs
+    type_file = os.path.splitext(file)[1]
+    if type_file == '.zip':
+        # On extrait le fichier modinfo.json de l'archive et on recupere le modid, name et version
+        filepath = os.path.join(PATH_MODS, file)
+        if zipfile.is_zipfile(filepath):  # Vérifie si fichier est un Zip valide
+            archive = zipfile.ZipFile(filepath, 'r')
+            archive.extract('modinfo.json', PATH_TEMP)
+            zipfile.ZipFile.close(archive)
+        json_file_path = os.path.join(PATH_TEMP, "modinfo.json")
+        with open(json_file_path, "r", encoding='utf-8-sig') as fichier_json:  # place le contenu du fichier dans une variable pour le tester ensuite avec regex
+            content_file = fichier_json.read()
+        with open(json_file_path, "r", encoding='utf-8-sig') as fichier_json:
+            try:
+                des = json.load(fichier_json)
+                regex_name = r'name'
+                result_name = re.search(regex_name, content_file, flags=re.IGNORECASE)
+                regex_modid = r'modid'
+                result_modid = re.search(regex_modid, content_file, flags=re.IGNORECASE)
+                regex_version = r'version'
+                result_version = re.search(regex_version, content_file, flags=re.IGNORECASE)
+                mod_name = des[result_name.group()]
+                mod_modid = des[result_modid.group()]
+                mod_version = des[result_version.group()]
+            except Exception:
+                json_correct = json_correction(content_file)
+                mod_name = json_correct[0]
+                mod_version = json_correct[1]
+                mod_modid = json_correct[2]
+    elif type_file == '.cs':
+        filepath = os.path.join(PATH_MODS, file)
+        with open(filepath, "r", encoding='utf-8-sig') as fichier_cs:
+            cs_file = fichier_cs.read()
+            regexp_name = '(namespace )(\w*)'
+            result_name = re.search(regexp_name, cs_file, flags=re.IGNORECASE)
+            regexp_version = '(Version\s=\s\")([\d.]*)\"'
+            result_version = re.search(regexp_version, cs_file, flags=re.IGNORECASE)
+            mod_name = result_name[2]
+            mod_version = result_version[2]
+            mod_modid = mod_name
+    return mod_name, mod_modid, mod_version, filepath
 
 
 def liste_complete_mods():
     # On crée la liste contenant les noms des fichiers zip
     regex_filename = ''
+    regex_filename_cs = ''
     for elem in glob.glob(PATH_MODS + "\*.zip"):
         if PATH_MODS == PATH_MODS_VANILLA:
             regex_filename = r'.*\\Mods\\(.*)'
@@ -154,6 +179,14 @@ def liste_complete_mods():
             regex_filename = r'.*\\(.*)'
         result_filename = re.search(regex_filename, elem, flags=re.IGNORECASE)
         mod_filename.append(result_filename.group(1))
+    # On ajoute les fichiers .cs
+    for elem_cs in glob.glob(PATH_MODS + "\*.cs"):
+        if PATH_MODS == PATH_MODS_VANILLA:
+            regex_filename_cs = r'.*\\Mods\\(.*)'
+        elif PATH_MODS == PATH_MODS_VSLAUNCHER:
+            regex_filename_cs = r'.*\\(.*)'
+        result_filename_cs = re.search(regex_filename_cs, elem_cs, flags=re.IGNORECASE)
+        mod_filename.append(result_filename_cs.group(1))
     if len(mod_filename) == 0:
         print(f"{err_list}")
         os.system("pause")
@@ -201,6 +234,36 @@ def compversion(v1, v2):
     return 0
 
 
+def get_changelog(url):
+    # Scrap pour recuperer le changelog
+    req_url = urllib.request.Request(url)
+    log = {}
+    try:
+        urllib.request.urlopen(req_url)
+        req_page_url = requests.get(url)
+        page = req_page_url.content
+        soup = BeautifulSoup(page, features="html.parser")
+        soup_changelog = soup.find("div", {"class": "changelogtext"})
+        # on recupere la version du chanlog
+        regexp_ch_log_ver = '<strong>(.*)</strong>'
+        ch_log_ver = re.search(regexp_ch_log_ver, str(soup_changelog))
+        # on récupère le changelog
+        regexp_ch_log_txt = '<li>(.*)</li>'
+        ch_log_txt = re.findall(regexp_ch_log_txt, str(soup_changelog))
+        if not ch_log_txt:
+            regexp_ch_log_txt = '<p>\W\s(.*)</p>'
+            ch_log_txt = re.findall(regexp_ch_log_txt, str(soup_changelog))
+            if not ch_log_txt:
+                regexp_ch_log_txt = '<p>(.*)</p>'
+                ch_log_txt = re.findall(regexp_ch_log_txt, str(soup_changelog))
+        log[ch_log_ver.group(1)] = ch_log_txt
+        log['url'] = url
+    except urllib.error.URLError as err_url:
+        # Affiche de l'erreur si le lien n'est pas valide
+        print(err_url.reason)
+    return log
+
+
 # On crée le fichier config.ini si inexistant
 if not os.path.isfile(CONFIG_FILE):
     set_config_ini()
@@ -208,7 +271,7 @@ config_path = config_read.get('ModPath', 'path')
 PATH_MODS = config_path
 
 # *** Texte d'accueil ***
-print(f'\n\n\t\t\t[bold cyan]{title}[/bold cyan]')
+print(f'\n\n\t\t\t[bold cyan]{title} - {num_version}[/bold cyan]')
 print('\t\t\thttps://mods.vintagestory.at/list/mod\n\n')
 
 # On crée la liste des mods à exclure de la maj
@@ -232,7 +295,9 @@ for mod_maj in liste_mod_maj:
     modname_value = extract_modinfo(mod_maj)[0]
     version_value = extract_modinfo(mod_maj)[2]
     modid_value = extract_modinfo(mod_maj)[1]
-    zipfilename_value = extract_modinfo(mod_maj)[3]
+    if modid_value == '':
+        modid_value = re.sub(r'\s', '', modname_value).lower()
+    filename_value = extract_modinfo(mod_maj)[3]
     mod_url_api = os.path.join(URL_API, modid_value)
     # On teste la validité du lien url
     req = urllib.request.Request(mod_url_api)
@@ -240,21 +305,24 @@ for mod_maj in liste_mod_maj:
         urllib.request.urlopen(req)  # On teste l'existence du lien
         req_page = requests.get(mod_url_api)
         resp_dict = req_page.json()
+        mod_assetID = (resp_dict['mod']['assetid'])
         mod_last_version = (resp_dict['mod']['releases'][0]['modversion'])
         mod_file_onlinepath = (resp_dict['mod']['releases'][0]['mainfile'])
         # compare les versions
         result_compversion = compversion(version_value, mod_last_version)
-        print(f'[green]{modname_value}[/green]: {compver1}{version_value} - {compver2}{mod_last_version}')
+        print(f' [green]{modname_value}[/green]: {compver1}{version_value} - {compver2}{mod_last_version}')
         if result_compversion == 1:
             dl_link = os.path.join(URL_MODS, mod_file_onlinepath)
             resp = requests.get(dl_link, stream=True)
             file_size = int(resp.headers.get("Content-length"))
             file_size_mo = round(file_size / (1024 ** 2), 2)
             print(f'\t{compver3}{file_size_mo} {compver3a}')
-            print(f'\t[green]{modname_value} v.{mod_last_version}[/green] {compver4}')
-            mods_updated.append(modname_value)
-            os.remove(zipfilename_value)
-            wget.download(dl_link, PATH_MODS)
+            print(f'\t[green] {modname_value} v.{mod_last_version}[/green] {compver4}')
+            os.remove(filename_value)
+            wget.download(dl_link, PATH_MODS)  # desactivation temporaire
+            Path_Changelog = f'https://mods.vintagestory.at/show/mod/{mod_assetID}#tab-files'
+            log_txt = get_changelog(Path_Changelog)  # On récupère le changelog
+            mods_updated[modname_value] = log_txt
             print('\n')
             nb_maj += 1
     except urllib.error.URLError as e:
@@ -262,19 +330,44 @@ for mod_maj in liste_mod_maj:
         print(e.reason)
     except KeyError as err:
         # print(err.args)  # pour debuggage
-        print(f'[red]{Error} !!! - {modname_value} - {Error_modid}[/red]')
+        print(f'[green] {modname_value}[/green]: [red]{Error} !!! {Error_modid}[/red]')
 
 # Résumé de la maj
 if nb_maj > 1:
     print(f'  [yellow]{summary1}[/yellow] \n')
     print(f'{summary2}')
-    for modup in mods_updated:
-        print(f'- [green]{modup}[/green]')
+    with open('updates.log', 'w', encoding='utf-8-sig') as logfile:
+        logfile.write(f'\n\t\t\t{last_update} : {datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S")}\n\n')
+        for key, value in mods_updated.items():
+            # print(f' - [green]{key} {value["url"]} :[/green]')  # affiche en plus l'url du mod
+            print(f' - [green]{key} :[/green]')
+            logfile.write(f'\n {key} ({value["url"]}) :\n')  # affiche en plus l'url du mod
+            for log_version, log_txt in value.items():
+                if log_version != 'url':
+                    print(f'\t[bold][yellow]Changelog {log_version} :[/yellow][/bold]')
+                    logfile.write(f'\tChangelog {log_version} :\n')
+                    for line in log_txt:
+                        print(f'\t\t[yellow]* {line}[/yellow]')
+                        logfile.write(f'\t\t* {line}\n')
+
+
 elif nb_maj == 1:
     print(f'  [yellow]{summary3}[/yellow] \n')
     print(f'{summary4}')
-    for modup in mods_updated:
-        print(f'- [green]{modup}[/green]')
+    with open('updates.log', 'w', encoding='utf-8-sig') as logfile:
+        logfile.write(f'\n\t\t\t{last_update} : {datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S")}\n\n')
+        for key, value in mods_updated.items():
+            # print(f' - [green]{key} {value["url"]} :[/green]')  # affiche en plus l'url du mod
+            print(f' - [green]{key} :[/green]')
+            logfile.write(f'\n {key} ({value["url"]}) :\n')  # affiche en plus l'url du mod
+            for log_version, log_txt in value.items():
+                if log_version != 'url':
+                    print(f'\t[bold][yellow]Changelog {log_version} :[/yellow][/bold]')
+                    logfile.write(f'\tChangelog {log_version} :\n')
+                    for line in log_txt:
+                        print(f'\t\t[yellow]* {line}[/yellow]')
+                        logfile.write(f'\t\t* {line}\n')
+
 else:
     print(f'  [yellow]{summary5}[/yellow]\n')
 
@@ -286,7 +379,7 @@ if len(mods_exclu) > 1:
     for k in range(0, len(mods_exclu)):
         # On appelle la fonction pour extraire modinfo.json
         modinfo_values = extract_modinfo(mods_exclu[k])
-        print(f'- [red]{modinfo_values[0]} v.{modinfo_values[2]}[/red]')
+        print(f' - [red]{modinfo_values[0]} v.{modinfo_values[2]}[/red]')
 
 # On efface le dossier temp
 try:
