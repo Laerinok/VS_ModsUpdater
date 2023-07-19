@@ -3,6 +3,8 @@
 """
 Gestion des mods de Vintage Story :
 - Liste les mods installés et vérifie s'il existe une version plus récente et la télécharge
+- Affiche le résumé
+- Crée un fichier updates.log
 """
 __author__ = "Laerinok"
 __date__ = "2023-07-19"
