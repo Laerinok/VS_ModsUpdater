@@ -15,5 +15,6 @@
 	"summary6" : "The following mod is excluded from the update : ",
 	"summary7" : "The following mods are excluded from the update : ",	
 	"Error_modid" : "The modder did not fill in the modid in the modinfo.json file. Unable to get the update.",
-	"Error" : "ERROR"
+	"Error" : "ERROR",
+	"last_update" : "Laste Update"
 }

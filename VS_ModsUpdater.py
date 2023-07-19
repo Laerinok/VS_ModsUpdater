@@ -9,6 +9,7 @@ __date__ = "2023-07-19"
 
 
 import configparser
+import datetime
 import glob
 import json
 import locale
@@ -72,6 +73,7 @@ with open(file_lang_path, "r", encoding='utf-8-sig') as lang_json:
     summary7 = desc['summary7']
     Error_modid = desc['Error_modid']
     Error = desc['Error']
+    last_update = desc['last_update']
 
 # Définition des listes
 mod_filename = []
@@ -246,10 +248,13 @@ def get_changelog(url):
         regexp_ch_log_txt = '<li>(.*)</li>'
         ch_log_txt = re.findall(regexp_ch_log_txt, str(soup_changelog))
         if not ch_log_txt:
-            regexp_ch_log_txt = '<p>(.*)</p>'
+            regexp_ch_log_txt = '<p>\W\s(.*)</p>'
             ch_log_txt = re.findall(regexp_ch_log_txt, str(soup_changelog))
-            print(ch_log_txt)  # test
+            if not ch_log_txt:
+                regexp_ch_log_txt = '<p>(.*)</p>'
+                ch_log_txt = re.findall(regexp_ch_log_txt, str(soup_changelog))
         log[ch_log_ver.group(1)] = ch_log_txt
+        log['url'] = url
     except urllib.error.URLError as err_url:
         # Affiche de l'erreur si le lien n'est pas valide
         print(err_url.reason)
@@ -310,8 +315,8 @@ for mod_maj in liste_mod_maj:
             file_size_mo = round(file_size / (1024 ** 2), 2)
             print(f'\t{compver3}{file_size_mo} {compver3a}')
             print(f'\t[green] {modname_value} v.{mod_last_version}[/green] {compver4}')
-            # os.remove(filename_value)
-            # wget.download(dl_link, PATH_MODS)  # desactivation temporaire
+            os.remove(filename_value)
+            wget.download(dl_link, PATH_MODS)  # desactivation temporaire
             Path_Changelog = f'https://mods.vintagestory.at/show/mod/{mod_assetID}#tab-files'
             log_txt = get_changelog(Path_Changelog)  # On récupère le changelog
             mods_updated[modname_value] = log_txt
@@ -328,22 +333,37 @@ for mod_maj in liste_mod_maj:
 if nb_maj > 1:
     print(f'  [yellow]{summary1}[/yellow] \n')
     print(f'{summary2}')
-    for key, value in mods_updated.items():
-        print(f' - [green]{key}[/green]')
-        for log_version, log_txt in value.items():
-            print(f'\t[bold][yellow]Changelog {log_version} :[/yellow][/bold]')
-            for line in log_txt:
-                print(f'\t\t[yellow]* {line}[/yellow]')
+    with open('updates.log', 'w', encoding='utf-8-sig') as logfile:
+        logfile.write(f'\n\t\t\t{last_update} : {datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S")}\n\n')
+        for key, value in mods_updated.items():
+            # print(f' - [green]{key} {value["url"]} :[/green]')  # affiche en plus l'url du mod
+            print(f' - [green]{key} :[/green]')
+            logfile.write(f'\n {key} ({value["url"]}) :\n')  # affiche en plus l'url du mod
+            for log_version, log_txt in value.items():
+                if log_version != 'url':
+                    print(f'\t[bold][yellow]Changelog {log_version} :[/yellow][/bold]')
+                    logfile.write(f'\tChangelog {log_version} :\n')
+                    for line in log_txt:
+                        print(f'\t\t[yellow]* {line}[/yellow]')
+                        logfile.write(f'\t\t* {line}\n')
+
 
 elif nb_maj == 1:
     print(f'  [yellow]{summary3}[/yellow] \n')
     print(f'{summary4}')
-    for key, value in mods_updated.items():
-        print(f' - [green]{key}[/green]')
-        for log_version, log_txt in value.items():
-            print(f'\t[bold][yellow]Changelog {log_version} :[/yellow][/bold]')
-            for line in log_txt:
-                print(f'\t\t[yellow]* {line}[/yellow]')
+    with open('updates.log', 'w', encoding='utf-8-sig') as logfile:
+        logfile.write(f'\n\t\t\t{last_update} : {datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S")}\n\n')
+        for key, value in mods_updated.items():
+            # print(f' - [green]{key} {value["url"]} :[/green]')  # affiche en plus l'url du mod
+            print(f' - [green]{key} :[/green]')
+            logfile.write(f'\n {key} ({value["url"]}) :\n')  # affiche en plus l'url du mod
+            for log_version, log_txt in value.items():
+                if log_version != 'url':
+                    print(f'\t[bold][yellow]Changelog {log_version} :[/yellow][/bold]')
+                    logfile.write(f'\tChangelog {log_version} :\n')
+                    for line in log_txt:
+                        print(f'\t\t[yellow]* {line}[/yellow]')
+                        logfile.write(f'\t\t* {line}\n')
 
 else:
     print(f'  [yellow]{summary5}[/yellow]\n')
