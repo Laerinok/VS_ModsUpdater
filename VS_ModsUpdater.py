@@ -5,9 +5,12 @@ Gestion des mods de Vintage Story v.1.0.2:
 - Liste les mods installés et vérifie s'il existe une version plus récente et la télécharge
 - Affiche le résumé
 - Crée un fichier updates.log
+- TO DO LIST :
+    - maj selon la version installée
+    - Verification de la présence d'une maj du scriptu sur moddb
 """
 __author__ = "Laerinok"
-__date__ = "2023-07-19"
+__date__ = "2023-07-23"
 
 
 import configparser
@@ -26,6 +29,9 @@ import wget
 from bs4 import BeautifulSoup
 from rich import print
 
+# ##### Version pour affichae titre et verif version en ligne.
+num_version = '1.0.3'
+# #####
 
 # Définition des chemins
 PATH_CONFIG = os.path.join(os.getenv('APPDATA'), 'VintagestoryData', 'ModConfig', 'ModsUpdate')
@@ -86,7 +92,6 @@ mods_updated = {}
 
 # Définition des variables
 nb_maj = 0
-num_version = '1.0.2'
 
 
 def set_config_ini():
