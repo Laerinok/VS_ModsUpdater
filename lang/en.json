@@ -1,5 +1,6 @@
 {
 	"setconfig" : "# To exclude a mod from the update, add the name (with extension) of the mod's zip file after = (ONE per line)",
+	"setconfig01" : "Select the desired game version (ex: last, 1.18, 1.18.x). default: last",
 	"title" : "Vintage Story Mod Updater (by Laerinok).",
 	"err_list" : "No mods in the Mods folder.\nThe program will stop.",
 	"compver1" : "installed version : ",

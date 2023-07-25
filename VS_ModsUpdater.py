@@ -1,13 +1,13 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Gestion des mods de Vintage Story v.1.0.2:
+Gestion des mods de Vintage Story v.1.0.3:
 - Liste les mods installés et vérifie s'il existe une version plus récente et la télécharge
 - Affiche le résumé
 - Crée un fichier updates.log
 - TO DO LIST :
-    - maj selon la version installée
-    - Verification de la présence d'une maj du scriptu sur moddb
+    - maj des mods selon la version installée
+    - Verification de la présence d'une maj du script sur moddb
 """
 __author__ = "Laerinok"
 __date__ = "2023-07-23"
@@ -29,7 +29,7 @@ import wget
 from bs4 import BeautifulSoup
 from rich import print
 
-# ##### Version pour affichae titre et verif version en ligne.
+# ##### Version du scrpit pour affichae titre et verif version en ligne.
 num_version = '1.0.3'
 # #####
 
@@ -65,6 +65,7 @@ if not os.path.isfile(file_lang_path):
 with open(file_lang_path, "r", encoding='utf-8-sig') as lang_json:
     desc = json.load(lang_json)
     setconfig = desc['setconfig']
+    setconfig01 = desc['setconfig']
     title = desc['title']
     err_list = desc['err_list']
     compver1 = desc['compver1']
@@ -92,6 +93,7 @@ mods_updated = {}
 
 # Définition des variables
 nb_maj = 0
+gamever_max = config_read.get('Game_Version_max', 'version')  # On récupère la version max du jeu pour la maj
 
 
 def set_config_ini():
@@ -102,6 +104,9 @@ def set_config_ini():
         config.add_section('ModPath')
         config.set('ModPath', 'path', PATH_MODS_VANILLA)
         config.set('ModPath', ';path', PATH_MODS_VSLAUNCHER)
+        config.add_section('Game_Version_max')
+        config.set('Game_Version_max', setconfig01)
+        config.set('Game_Version_max', 'version', 'last')
         config.add_section('Mod_Exclusion')
         config.set('Mod_Exclusion', setconfig)
         for i in range(1, 11):
@@ -222,7 +227,6 @@ def compversion(v1, v2):
         m = len(arr2)
 
     # compares which list is bigger and fills
-    # smaller list with zero (for unequal delimiters)
     if n > m:
         for i in range(m, n):
             arr2.append(0)
@@ -232,6 +236,7 @@ def compversion(v1, v2):
 
     # returns -1 if version 1 is bigger and 1 if version 2 is bigger and 0 if equal
     for i in range(len(arr1)):
+        # print(f'arr1[i]:{arr1[i]} - arr2[i]:{arr2[i]}')  # debug
         if arr1[i] > arr2[i]:
             return -1
         elif arr2[i] > arr1[i]:
@@ -261,6 +266,7 @@ def get_changelog(url):
             if not ch_log_txt:
                 regexp_ch_log_txt = '<p>(.*)</p>'
                 ch_log_txt = re.findall(regexp_ch_log_txt, str(soup_changelog))
+                ch_log_txt = re.split(r'<br>|</br>|<br/>', ch_log_txt[0])
         log[ch_log_ver.group(1)] = ch_log_txt
         log['url'] = url
     except urllib.error.URLError as err_url:
@@ -313,9 +319,13 @@ for mod_maj in liste_mod_maj:
         mod_assetID = (resp_dict['mod']['assetid'])
         mod_last_version = (resp_dict['mod']['releases'][0]['modversion'])
         mod_file_onlinepath = (resp_dict['mod']['releases'][0]['mainfile'])
+
         # compare les versions
         result_compversion = compversion(version_value, mod_last_version)
         print(f' [green]{modname_value}[/green]: {compver1}{version_value} - {compver2}{mod_last_version}')
+        # On récupère les version du jeu nécessaire pour le mod
+        mod_game_versions = resp_dict['mod']['releases'][0]['tags']
+
         if result_compversion == 1:
             dl_link = os.path.join(URL_MODS, mod_file_onlinepath)
             resp = requests.get(dl_link, stream=True)
@@ -323,8 +333,8 @@ for mod_maj in liste_mod_maj:
             file_size_mo = round(file_size / (1024 ** 2), 2)
             print(f'\t{compver3}{file_size_mo} {compver3a}')
             print(f'\t[green] {modname_value} v.{mod_last_version}[/green] {compver4}')
-            os.remove(filename_value)
-            wget.download(dl_link, PATH_MODS)  # desactivation temporaire
+            # os.remove(filename_value)
+            # wget.download(dl_link, PATH_MODS)  # desactivation temporaire
             Path_Changelog = f'https://mods.vintagestory.at/show/mod/{mod_assetID}#tab-files'
             log_txt = get_changelog(Path_Changelog)  # On récupère le changelog
             mods_updated[modname_value] = log_txt
@@ -354,7 +364,6 @@ if nb_maj > 1:
                     for line in log_txt:
                         print(f'\t\t[yellow]* {line}[/yellow]')
                         logfile.write(f'\t\t* {line}\n')
-
 
 elif nb_maj == 1:
     print(f'  [yellow]{summary3}[/yellow] \n')
