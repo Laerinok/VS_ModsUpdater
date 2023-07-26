@@ -5,7 +5,7 @@ Gestion des mods de Vintage Story v.1.0.3:
 - Liste les mods installés et vérifie s'il existe une version plus récente et la télécharge
 - Affiche le résumé
 - Crée un fichier updates.log
-- maj des mods selon la version installée
+- maj des mods pour une version donnée du jeu
 - TO DO LIST :
     - Verification de la présence d'une maj du script sur moddb
 """
@@ -362,8 +362,8 @@ for mod_maj in liste_mod_maj:
                 file_size_mo = round(file_size / (1024 ** 2), 2)
                 print(f'\t{compver3}{file_size_mo} {compver3a}')
                 print(f'\t[green] {modname_value} v.{mod_last_version}[/green] {compver4}')
-                # os.remove(filename_value)
-                # wget.download(dl_link, PATH_MODS)
+                os.remove(filename_value)
+                wget.download(dl_link, PATH_MODS)
                 Path_Changelog = f'https://mods.vintagestory.at/show/mod/{mod_assetID}#tab-files'
                 log_txt = get_changelog(Path_Changelog)  # On récupère le changelog
                 mods_updated[modname_value] = log_txt
