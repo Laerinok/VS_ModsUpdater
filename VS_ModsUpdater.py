@@ -49,9 +49,24 @@ if not os.path.isdir(PATH_TEMP):
 if not os.path.isdir(PATH_CONFIG):
     os.mkdir(PATH_CONFIG)
 
-# On charge le fichier config.ini
-config_read = configparser.ConfigParser(allow_no_value=True)
-config_read.read(CONFIG_FILE, encoding='utf-8-sig')
+
+def set_config_ini():
+    # Création du config.ini si inexistant
+    with open(CONFIG_FILE, "w", encoding="utf-8") as cfgfile:
+        # Ajout du contenu
+        config = configparser.ConfigParser(allow_no_value=True)
+        config.add_section('ModPath')
+        config.set('ModPath', 'path', PATH_MODS_VANILLA)
+        config.set('ModPath', ';path', PATH_MODS_VSLAUNCHER)
+        config.add_section('Game_Version_max')
+        config.set('Game_Version_max', setconfig01)
+        config.set('Game_Version_max', 'version', '100')
+        config.add_section('Mod_Exclusion')
+        config.set('Mod_Exclusion', setconfig)
+        for i in range(1, 11):
+            config.set('Mod_Exclusion', 'mod' + str(i), '')
+        config.write(cfgfile)
+
 
 # On récupère la langue du système
 lang = locale.getlocale()
@@ -65,9 +80,11 @@ if not os.path.isfile(file_lang_path):
 with open(file_lang_path, "r", encoding='utf-8-sig') as lang_json:
     desc = json.load(lang_json)
     setconfig = desc['setconfig']
-    setconfig01 = desc['setconfig']
+    setconfig01 = desc['setconfig01']
     title = desc['title']
     title2 = desc['title2']
+    first_launch = desc['first_launch']
+    first_launch2 = desc['first_launch2']
     err_list = desc['err_list']
     compver1 = desc['compver1']
     compver2 = desc['compver2']
@@ -85,6 +102,20 @@ with open(file_lang_path, "r", encoding='utf-8-sig') as lang_json:
     Error = desc['Error']
     last_update = desc['last_update']
 
+# On charge le fichier config.ini
+config_read = configparser.ConfigParser(allow_no_value=True)
+config_read.read(CONFIG_FILE, encoding='utf-8-sig')
+
+# On crée le fichier config.ini si inexistant
+if not os.path.isfile(CONFIG_FILE):
+    set_config_ini()
+    print(f'\t\t[bold cyan]{first_launch}[/bold cyan]')
+    print(f'\t\t[bold cyan]{first_launch2}[/bold cyan]')
+    os.system("pause")
+    exit()
+config_path = config_read.get('ModPath', 'path')
+PATH_MODS = config_path
+
 # Définition des listes
 mod_filename = []
 mods_exclu = []
@@ -95,24 +126,6 @@ mods_updated = {}
 # Définition des variables
 nb_maj = 0
 gamever_max = config_read.get('Game_Version_max', 'version')  # On récupère la version max du jeu pour la maj
-
-
-def set_config_ini():
-    # Création du config.ini si inexistant
-    with open(CONFIG_FILE, "w", encoding="utf-8") as cfgfile:
-        # Ajout du contenu
-        config = configparser.ConfigParser(allow_no_value=True)
-        config.add_section('ModPath')
-        config.set('ModPath', 'path', PATH_MODS_VANILLA)
-        config.set('ModPath', ';path', PATH_MODS_VSLAUNCHER)
-        config.add_section('Game_Version_max')
-        config.set('Game_Version_max', setconfig01)
-        config.set('Game_Version_max', 'version', 'last')
-        config.add_section('Mod_Exclusion')
-        config.set('Mod_Exclusion', setconfig)
-        for i in range(1, 11):
-            config.set('Mod_Exclusion', 'mod' + str(i), '')
-        config.write(cfgfile)
 
 
 def json_correction(txt_json):
@@ -285,11 +298,7 @@ def get_changelog(url):
     return log
 
 
-# On crée le fichier config.ini si inexistant
-if not os.path.isfile(CONFIG_FILE):
-    set_config_ini()
-config_path = config_read.get('ModPath', 'path')
-PATH_MODS = config_path
+# ######
 
 if gamever_max == str(100):
     version = 'Toute version'
@@ -297,7 +306,7 @@ else:
     version = gamever_max
 # *** Texte d'accueil ***
 print(f'\n\n\t\t\t[bold cyan]{title} - {num_version}[/bold cyan]')
-print(f'\t\t\t\t\t\t[cyan]{title2}{version}[/cyan]')
+print(f'\t\t\t\t\t\t[cyan]{title2}[bold]{version}[/bold][/cyan]')
 print('\n\t\t\t\t\thttps://mods.vintagestory.at/list/mod\n\n')
 
 # On crée la liste des mods à exclure de la maj

@@ -1,8 +1,10 @@
 {
 	"setconfig" : "# To exclude a mod from the update, add the name (with extension) of the mod's zip file after = (ONE per line)",
-	"setconfig01" : "Select the desired game version (ex: last, 1.18, 1.18.x). default: last",
+	"setconfig01" : "# Select the desired game version (ex: 100, 1.18, 1.18.x). default: 100 (to have all versions)",
 	"title" : "Vintage Story Mod Updater (by Laerinok).",
-	"title2" : "",
+	"title2" : "Max game version:",
+	"first_launch" : "",
+	"first_launch2" : "",
 	"err_list" : "No mods in the Mods folder.\nThe program will stop.",
 	"compver1" : "installed version : ",
 	"compver2" : "last version : ",
@@ -18,5 +20,5 @@
 	"summary7" : "The following mods are excluded from the update : ",	
 	"Error_modid" : "The modder did not fill in the modid in the modinfo.json file. Unable to get the update.",
 	"Error" : "ERROR",
-	"last_update" : "Laste Update"
+	"last_update" : "Last Update"
 }
