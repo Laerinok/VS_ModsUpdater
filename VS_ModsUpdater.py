@@ -5,12 +5,12 @@ Gestion des mods de Vintage Story v.1.0.3:
 - Liste les mods installés et vérifie s'il existe une version plus récente et la télécharge
 - Affiche le résumé
 - Crée un fichier updates.log
+- maj des mods selon la version installée
 - TO DO LIST :
-    - maj des mods selon la version installée
     - Verification de la présence d'une maj du script sur moddb
 """
 __author__ = "Laerinok"
-__date__ = "2023-07-23"
+__date__ = "2023-07-26"
 
 
 import configparser
@@ -67,6 +67,7 @@ with open(file_lang_path, "r", encoding='utf-8-sig') as lang_json:
     setconfig = desc['setconfig']
     setconfig01 = desc['setconfig']
     title = desc['title']
+    title2 = desc['title2']
     err_list = desc['err_list']
     compver1 = desc['compver1']
     compver2 = desc['compver2']
@@ -210,6 +211,7 @@ def compversion(v1, v2):
     arr2 = v2.split(".")
     n = len(arr1)
     m = len(arr2)
+    # print(f'arr1:{arr1} - arr2:{arr2}')  # debug
     try:
         # converts to integer from string
         arr1 = [int(i) for i in arr1]
@@ -236,12 +238,20 @@ def compversion(v1, v2):
 
     # returns -1 if version 1 is bigger and 1 if version 2 is bigger and 0 if equal
     for i in range(len(arr1)):
-        # print(f'arr1[i]:{arr1[i]} - arr2[i]:{arr2[i]}')  # debug
+        # print(f'arr1[i]:{type(arr1[i])} - arr2[i]:{type(arr2[i])}')  # debug
         if arr1[i] > arr2[i]:
             return -1
         elif arr2[i] > arr1[i]:
             return 1
     return 0
+
+
+def get_max_version(versions):  # uniquement versions stables
+    # print(f'liste versions: {versions}')  # debug
+    regexp_max_version = 'v([\d.]*)([\W\w]*)'
+    max_version = re.search(regexp_max_version, max(versions))
+    max_version = max_version[1]
+    return max_version
 
 
 def get_changelog(url):
@@ -281,9 +291,14 @@ if not os.path.isfile(CONFIG_FILE):
 config_path = config_read.get('ModPath', 'path')
 PATH_MODS = config_path
 
+if gamever_max == str(100):
+    version = 'Toute version'
+else:
+    version = gamever_max
 # *** Texte d'accueil ***
 print(f'\n\n\t\t\t[bold cyan]{title} - {num_version}[/bold cyan]')
-print('\t\t\thttps://mods.vintagestory.at/list/mod\n\n')
+print(f'\t\t\t\t\t\t[cyan]{title2}{version}[/cyan]')
+print('\n\t\t\t\t\thttps://mods.vintagestory.at/list/mod\n\n')
 
 # On crée la liste des mods à exclure de la maj
 for j in range(1, 11):
@@ -319,27 +334,32 @@ for mod_maj in liste_mod_maj:
         mod_assetID = (resp_dict['mod']['assetid'])
         mod_last_version = (resp_dict['mod']['releases'][0]['modversion'])
         mod_file_onlinepath = (resp_dict['mod']['releases'][0]['mainfile'])
-
-        # compare les versions
+        # compare les versions des mods
         result_compversion = compversion(version_value, mod_last_version)
         print(f' [green]{modname_value}[/green]: {compver1}{version_value} - {compver2}{mod_last_version}')
         # On récupère les version du jeu nécessaire pour le mod
         mod_game_versions = resp_dict['mod']['releases'][0]['tags']
-
-        if result_compversion == 1:
-            dl_link = os.path.join(URL_MODS, mod_file_onlinepath)
-            resp = requests.get(dl_link, stream=True)
-            file_size = int(resp.headers.get("Content-length"))
-            file_size_mo = round(file_size / (1024 ** 2), 2)
-            print(f'\t{compver3}{file_size_mo} {compver3a}')
-            print(f'\t[green] {modname_value} v.{mod_last_version}[/green] {compver4}')
-            # os.remove(filename_value)
-            # wget.download(dl_link, PATH_MODS)  # desactivation temporaire
-            Path_Changelog = f'https://mods.vintagestory.at/show/mod/{mod_assetID}#tab-files'
-            log_txt = get_changelog(Path_Changelog)  # On récupère le changelog
-            mods_updated[modname_value] = log_txt
-            print('\n')
-            nb_maj += 1
+        mod_game_version_max = get_max_version(mod_game_versions)
+        # print(f'ver max: {mod_game_version_max}\n ver max jeu souhaitée {gamever_max}')  # debug
+        # On compare la version max souhaité à la version necessaire pour le mod
+        result_game_version = compversion(mod_game_version_max, gamever_max)
+        if result_game_version == 0 or result_game_version == 1:
+            # print('on peut mettre à jour')  # debug
+            #  #####
+            if result_compversion == 1:
+                dl_link = os.path.join(URL_MODS, mod_file_onlinepath)
+                resp = requests.get(dl_link, stream=True)
+                file_size = int(resp.headers.get("Content-length"))
+                file_size_mo = round(file_size / (1024 ** 2), 2)
+                print(f'\t{compver3}{file_size_mo} {compver3a}')
+                print(f'\t[green] {modname_value} v.{mod_last_version}[/green] {compver4}')
+                # os.remove(filename_value)
+                # wget.download(dl_link, PATH_MODS)
+                Path_Changelog = f'https://mods.vintagestory.at/show/mod/{mod_assetID}#tab-files'
+                log_txt = get_changelog(Path_Changelog)  # On récupère le changelog
+                mods_updated[modname_value] = log_txt
+                print('\n')
+                nb_maj += 1
     except urllib.error.URLError as e:
         # Affiche de l'erreur si le lien n'est pas valide
         print(e.reason)
