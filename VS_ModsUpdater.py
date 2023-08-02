@@ -1,7 +1,7 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Gestion des mods de Vintage Story v.1.0.3:
+Gestion des mods de Vintage Story v.1.0.4:
 - Liste les mods installés et vérifie s'il existe une version plus récente et la télécharge
 - Affiche le résumé
 - Crée un fichier updates.log
@@ -10,7 +10,7 @@ Gestion des mods de Vintage Story v.1.0.3:
     - Verification de la présence d'une maj du script sur moddb
 """
 __author__ = "Laerinok"
-__date__ = "2023-07-26"
+__date__ = "2023-08-02"
 
 
 import configparser
@@ -21,6 +21,7 @@ import locale
 import os
 import re
 import shutil
+import sys
 import urllib.request
 import urllib.error
 import zipfile
@@ -30,7 +31,7 @@ from bs4 import BeautifulSoup
 from rich import print
 
 # ##### Version du scrpit pour affichae titre et verif version en ligne.
-num_version = '1.0.3'
+num_version = '1.0.4'
 # #####
 
 # Définition des chemins
@@ -116,7 +117,7 @@ if not os.path.isfile(CONFIG_FILE):
     print(f'\t\t[bold cyan]{first_launch}[/bold cyan]')
     print(f'\t\t[bold cyan]{first_launch2}[/bold cyan]')
     os.system("pause")
-    exit()
+    sys.exit()
 config_path = config_read.get('ModPath', 'path')
 PATH_MODS = config_path
 
