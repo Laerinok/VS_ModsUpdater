@@ -33,7 +33,7 @@ from rich import print
 
 class Language:
     def __init__(self):
-        self.num_version = '1.0.3'
+        self.num_version = '1.0.5'
         self.url_mods = 'https://mods.vintagestory.at/'
         self.path_lang = "lang"
         # On récupère la langue du système
