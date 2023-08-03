@@ -3,6 +3,7 @@
 	"setconfig01" : "# Select the desired game version (ex: 100, 1.18, 1.18.x). default: 100 (to have all versions)",
 	"title" : "Vintage Story Mod Updater",
 	"title2" : "Max game version:",
+	"version_max" : "Any version",
 	"author" : "by Laerinok",
 	"first_launch" : "First execution of the program, creation of the config.ini file done.",
 	"first_launch2" : "You can continue with the update or add the mods to exclude in the config.ini file",

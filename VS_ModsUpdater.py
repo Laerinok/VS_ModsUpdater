@@ -33,7 +33,7 @@ from rich import print
 
 class Language:
     def __init__(self):
-        self.num_version = '1.0.5'
+        self.num_version = '1.0.3'
         self.url_mods = 'https://mods.vintagestory.at/'
         self.path_lang = "lang"
         # On récupère la langue du système
@@ -50,6 +50,7 @@ class Language:
             self.setconfig01 = desc['setconfig01']
             self.title = desc['title']
             self.title2 = desc['title2']
+            self.version_max = desc['version_max']
             self.author = desc['author']
             self.first_launch = desc['first_launch']
             self.first_launch2 = desc['first_launch2']
@@ -342,7 +343,7 @@ class VSUpdate(Language):
 
     def accueil(self, net_version):
         if self.gamever_max == str(100):
-            self.version = 'Toute version'
+            self.version = self.version_max
         else:
             self.version = self.gamever_max
         # *** Texte d'accueil ***
@@ -350,7 +351,7 @@ class VSUpdate(Language):
         # On vérifie si une version plus récente du script est en ligne
         maj_script = MajScript()
         maj_script.check_update_script()
-        print(f'\n\t\t\t\t\t\t[cyan]{self.title2}[bold]{self.version}[/bold][/cyan]\n')
+        print(f'\n\t\t\t\t\t\t[cyan]{self.title2}[bold] {self.version}[/bold][/cyan]\n')
         # print('\n\t\t\t\t\thttps://mods.vintagestory.at/list/mod\n\n')
 
     def mods_exclusion(self):
