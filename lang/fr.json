@@ -1,10 +1,13 @@
 {
 	"setconfig" : "# Pour exclure un mod de la maj, ajouter le nom du fichier zip (avec l'extension) du mod après = (UN par ligne)",
 	"setconfig01" : "# Sélectionner la version du jeu désirée (ex: 100, 1.18, 1.18.x). défaut : 100 (pour avoir toutes les versions)",
-	"title" : "Programme de mise à jour des mods de Vintage Story (par Laerinok).",
+	"title" : "Programme de mise à jour des mods de Vintage Story",
 	"title2" : "Version max du jeu: ",
+	"version_max" : "Toute version",
+	"author" : "par Laerinok",
 	"first_launch" : "Première éxécution du programme, création du fichier config.ini efféctuée.",
-	"first_launch2" : "Veuillez relancer le programme (vous pouvez auparavant ajouter les mods à exclure dans le fichier config.ini",
+	"first_launch2" : "Vous pouvez poursuivre la mise à jour ou bien ajouter les mods à exclure dans le fichier config.ini",
+	"first_launch3" : "Poursuivre la mise à jour ?",
 	"err_list" : "Aucun mod dans le dossier Mods.\nLe programme va s'arrêter",
 	"compver1" : "version installée : ",
 	"compver2" : "dernière version : ",
@@ -18,7 +21,10 @@
 	"summary5" : "Aucune mise à jour disponible.",
 	"summary6" : "Le mod suivant est exclu de la mise à jour : ",
 	"summary7" : "Les mods suivants sont exclus de la mise à jour :",
-	"Error_modid" : "Le moddeur n'a pas renseigné le modid dans le fichier modinfo.json. Impossible de récupérer la mise à jour.",
-	"Error" : "ERREUR",
-	"last_update" : "Dernière mise à jour"
+	"error_modid" : "Le moddeur n'a pas renseigné le modid dans le fichier modinfo.json. Impossible de récupérer la mise à jour.",
+	"error" : "ERREUR",
+	"last_update" : "Dernière mise à jour",
+	"yes" : "Oui",
+	"no" : "Non",
+	"existing_update" : "Nouvelle version du ModsUploader disponible !! "
 }
