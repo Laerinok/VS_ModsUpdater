@@ -1,7 +1,7 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Gestion des mods de Vintage Story NET7 v.1.0.4:
+Gestion des mods de Vintage Story v.1.0.4:
 - Liste les mods installés et vérifie s'il existe une version plus récente et la télécharge
 - Affiche le résumé
 - Crée un fichier updates.log
@@ -35,8 +35,8 @@ num_version = '1.0.4'
 # #####
 
 # Définition des chemins
-PATH_CONFIG = os.path.join(os.getenv('APPDATA'), 'VintagestoryDataNet7', 'ModConfig', 'ModsUpdate')
-PATH_MODS_VANILLA = os.path.join(os.getenv('APPDATA'), 'VintagestoryDataNet7', 'Mods')
+PATH_CONFIG = os.path.join(os.getenv('APPDATA'), 'VintagestoryData', 'ModConfig', 'ModsUpdate')
+PATH_MODS_VANILLA = os.path.join(os.getenv('APPDATA'), 'VintagestoryData', 'Mods')
 PATH_MODS_VSLAUNCHER = os.path.join(os.getenv('APPDATA'), 'VintageStoryModVault')
 CONFIG_FILE = os.path.join(PATH_CONFIG, 'config.ini')
 PATH_TEMP = "temp"
@@ -51,7 +51,7 @@ if not os.path.isdir(PATH_CONFIG):
     try:
         os.mkdir(PATH_CONFIG)
     except FileNotFoundError:
-        os.mkdir(os.path.join(os.getenv('APPDATA'), 'VintagestoryDataNet7', 'ModConfig'))
+        os.mkdir(os.path.join(os.getenv('APPDATA'), 'VintagestoryData', 'ModConfig'))
         os.mkdir(PATH_CONFIG)
 
 
