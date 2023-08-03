@@ -1,9 +1,11 @@
 # Ajout perso
 temp/*
 test.py
+VS_ModsUpdater_net4.py
+VS_ModsUpdater_net7.py
+Vintagestory.ico
 Net4_updates*.*
 Net7_updates*.*
-Vintagestory.ico
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

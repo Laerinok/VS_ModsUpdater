@@ -7,8 +7,7 @@ Pour NET4 ET NET7
 - Affiche le résumé
 - Crée un fichier updates.log
 - maj des mods pour une version donnée du jeu
-- TO DO LIST :
-    - Verification de la présence d'une maj du script sur moddb
+- Verification de la présence d'une maj du script sur moddb
 """
 __author__ = "Laerinok"
 __date__ = "2023-08-03"
