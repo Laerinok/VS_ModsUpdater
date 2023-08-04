@@ -177,7 +177,7 @@ class VSUpdate(Language):
             config.set('ModPath', 'path', self.path_mods)
             config.add_section('Game_Version_max')
             config.set('Game_Version_max', self.setconfig01)
-            config.set('Game_Version_max', 'version', '100')
+            config.set('Game_Version_max', 'version', '100.0.0')
             config.add_section('Mod_Exclusion')
             config.set('Mod_Exclusion', self.setconfig)
             for i in range(1, 11):

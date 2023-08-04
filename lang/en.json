@@ -1,6 +1,6 @@
 {
 	"setconfig" : "# To exclude a mod from the update, add the name (with extension) of the mod's zip file after = (ONE per line)",
-	"setconfig01" : "# Select the desired game version (ex: 100, 1.18, 1.18.x). default: 100 (to have all versions)",
+	"setconfig01" : "# Select the desired game version (ex: 100.0.0, 1.18, 1.18.1). default: 100.0.0 (to have all versions)",
 	"title" : "Vintage Story Mod Updater",
 	"title2" : "Max game version:",
 	"version_max" : "Any version",
