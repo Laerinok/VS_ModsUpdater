@@ -1,7 +1,7 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Gestion des mods de Vintage Story v.1.0.5:
+Gestion des mods de Vintage Story v.1.0.6:
 Pour NET4 ET NET7
 - Liste les mods installés et vérifie s'il existe une version plus récente et la télécharge
 - Affiche le résumé
@@ -34,7 +34,7 @@ from rich import print
 
 class Language:
     def __init__(self):
-        self.num_version = '1.0.5'
+        self.num_version = '1.0.6'
         self.url_mods = 'https://mods.vintagestory.at/'
         self.path_lang = "lang"
         # On récupère la langue du système
