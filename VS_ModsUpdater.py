@@ -10,7 +10,7 @@ Pour NET4 ET NET7
 - Verification de la présence d'une maj du script sur moddb
 """
 __author__ = "Laerinok"
-__date__ = "2023-08-03"
+__date__ = "2023-08-04"
 
 
 import configparser
@@ -26,6 +26,7 @@ import urllib.request
 import urllib.error
 import zipfile
 import requests
+import semver
 import wget
 from bs4 import BeautifulSoup
 from rich import print
@@ -97,7 +98,7 @@ class MajScript(Language):
             ch_log_ver = re.search(regexp_ch_log_ver, str(soup_changelog))
             # On compare les versions
             result = VSUpdate.compversion(self.num_version, ch_log_ver[1])
-            if result == 1:
+            if result == -1:
                 print(f'[red]\t\t{self.existing_update}[/red]{self.url_mods.rstrip("/")}{soup_link_prg["href"]}\n')
 
         except urllib.error.URLError as err_url:
@@ -260,44 +261,11 @@ class VSUpdate(Language):
 
     @staticmethod
     def compversion(v1, v2):
-        # This will split both the versions by '.'
-        arr1 = v1.split(".")
-        arr2 = v2.split(".")
-        n = len(arr1)
-        m = len(arr2)
-        # print(f'arr1:{arr1} - arr2:{arr2}')  # debug
-        try:
-            # converts to integer from string
-            arr1 = [int(i) for i in arr1]
-            arr2 = [int(i) for i in arr2]
-        except ValueError:
-            regex_ver = '([\d*.]*)(\W[\S]*)'
-            result_v1 = re.search(regex_ver, v1)
-            result_v2 = re.search(regex_ver, v2)
-            v1 = result_v1[0]
-            v2 = result_v2[0]
-
-            arr1 = v1.split(".")
-            arr2 = v2.split(".")
-            n = len(arr1)
-            m = len(arr2)
-
-        # compares which list is bigger and fills
-        if n > m:
-            for i in range(m, n):
-                arr2.append(0)
-        elif m > n:
-            for i in range(n, m):
-                arr1.append(0)
-
-        # returns -1 if version 1 is bigger and 1 if version 2 is bigger and 0 if equal
-        for i in range(len(arr1)):
-            # print(f'arr1[i]:{type(arr1[i])} - arr2[i]:{type(arr2[i])}')  # debug
-            if arr1[i] > arr2[i]:
-                return -1
-            elif arr2[i] > arr1[i]:
-                return 1
-        return 0
+        regex_ver = '(\d.*)'
+        ver1 = re.search(regex_ver, v1)
+        ver2 = re.search(regex_ver, v2)
+        compver = semver.compare(ver1[1], ver2[1])
+        return compver
 
     @staticmethod
     def get_max_version(versions):  # uniquement versions stables
@@ -400,10 +368,12 @@ class VSUpdate(Language):
                 # print(f'ver max: {mod_game_version_max}\n ver max jeu souhaitée {gamever_max}')  # debug
                 # On compare la version max souhaité à la version necessaire pour le mod
                 result_game_version = self.compversion(mod_game_version_max, self.gamever_max)
-                if result_game_version == 0 or result_game_version == 1:
+                # print(result_compversion)  # debug
+                # print(result_game_version)  # debug
+                if result_game_version == 0 or result_game_version == -1:
                     # print('on peut mettre à jour')  # debug
                     #  #####
-                    if result_compversion == 1:
+                    if result_compversion == -1:
                         dl_link = os.path.join(self.url_mods, mod_file_onlinepath)
                         resp = requests.get(dl_link, stream=True)
                         file_size = int(resp.headers.get("Content-length"))
