@@ -6,6 +6,7 @@ VS_ModsUpdater_net7.py
 Vintagestory.ico
 Net4_updates*.*
 Net7_updates*.*
+*wip.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
