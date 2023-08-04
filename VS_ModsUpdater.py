@@ -1,7 +1,7 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Gestion des mods de Vintage Story v.1.0.6:
+Gestion des mods de Vintage Story v.1.0.7:
 Pour NET4 ET NET7
 - Liste les mods installés et vérifie s'il existe une version plus récente et la télécharge
 - Affiche le résumé
@@ -34,7 +34,7 @@ from rich import print
 
 class Language:
     def __init__(self):
-        self.num_version = '1.0.6'
+        self.num_version = '1.0.7'
         self.url_mods = 'https://mods.vintagestory.at/'
         self.path_lang = "lang"
         # On récupère la langue du système
@@ -177,7 +177,7 @@ class VSUpdate(Language):
             config.set('ModPath', 'path', self.path_mods)
             config.add_section('Game_Version_max')
             config.set('Game_Version_max', self.setconfig01)
-            config.set('Game_Version_max', 'version', '100')
+            config.set('Game_Version_max', 'version', '100.0.0')
             config.add_section('Mod_Exclusion')
             config.set('Mod_Exclusion', self.setconfig)
             for i in range(1, 11):
@@ -310,7 +310,7 @@ class VSUpdate(Language):
         return log
 
     def accueil(self, net_version):
-        if self.gamever_max == str(100):
+        if self.gamever_max == '100.0.0':
             self.version = self.version_max
         else:
             self.version = self.gamever_max
