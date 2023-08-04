@@ -1,6 +1,6 @@
 {
 	"setconfig" : "# Pour exclure un mod de la maj, ajouter le nom du fichier zip (avec l'extension) du mod après = (UN par ligne)",
-	"setconfig01" : "# Sélectionner la version du jeu désirée (ex: 100, 1.18, 1.18.x). défaut : 100 (pour avoir toutes les versions)",
+	"setconfig01" : "# Sélectionner la version du jeu désirée (ex: 100.0.0, 1.18, 1.18.1). défaut : 100.0.0 (pour avoir toutes les versions)",
 	"title" : "Programme de mise à jour des mods de Vintage Story",
 	"title2" : "Version max du jeu: ",
 	"version_max" : "Toute version",

@@ -1,7 +1,7 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Gestion des mods de Vintage Story v.1.0.7:
+Gestion des mods de Vintage Story v.1.0.6:
 Pour NET4 ET NET7
 - Liste les mods installés et vérifie s'il existe une version plus récente et la télécharge
 - Affiche le résumé
@@ -17,7 +17,7 @@ import configparser
 import datetime
 import glob
 import json
-import locale
+# import locale
 import os
 import re
 import shutil
@@ -34,13 +34,15 @@ from rich import print
 
 class Language:
     def __init__(self):
-        self.num_version = '1.0.7'
+        self.num_version = '1.0.6'
         self.url_mods = 'https://mods.vintagestory.at/'
         self.path_lang = "lang"
-        # On récupère la langue du système
-        lang = locale.getlocale()
-        lang = str(lang[0])
-        file_lang = f"{lang.split('_')[0]}.json"
+        # On récupère la langue
+        self.config_read = configparser.ConfigParser(allow_no_value=True)
+        file_lang = self.config_read.get('Language', 'lang')
+        # lang = locale.getlocale()
+        # lang = str(lang[0])
+        # file_lang = f"{lang.split('_')[0]}.json"
         file_lang_path = os.path.join(self.path_lang, file_lang)
         if not os.path.isfile(file_lang_path):
             file_lang_path = os.path.join(self.path_lang, 'en.json')  # on charge en.json si aucun fichier de langue n'est présent
@@ -127,6 +129,8 @@ class VSUpdate(Language):
                 os.mkdir(os.path.join(vsdata_path, 'ModConfig'))
                 os.mkdir(self.path_config)
         # Ancien emplacement du chargement du fichier langue
+        # On charge le fichier config.ini
+        # self.config_read = configparser.ConfigParser(allow_no_value=True)
         Language()
         # On crée le fichier config.ini si inexistant, puis on sort du programme si on veut ajouter des mods à exclure
         if not os.path.isfile(self.config_file):
@@ -136,8 +140,6 @@ class VSUpdate(Language):
             maj_ok = input(f'\t\t{self.first_launch3} ({self.yes}/{self.no}) : ')
             if maj_ok == str(self.no).lower() or maj_ok == str(self.no[0]).lower():
                 sys.exit()
-        # On charge le fichier config.ini
-        self.config_read = configparser.ConfigParser(allow_no_value=True)
         self.config_read.read(self.config_file, encoding='utf-8-sig')
         self.config_path = self.config_read.get('ModPath', 'path')
         self.path_mods = self.config_path
@@ -173,6 +175,8 @@ class VSUpdate(Language):
         with open(self.config_file, "w", encoding="utf-8") as cfgfile:
             # Ajout du contenu
             config = configparser.ConfigParser(allow_no_value=True)
+            config.add_section('Language')
+            config.set('Language', 'lang', 'en.json')
             config.add_section('ModPath')
             config.set('ModPath', 'path', self.path_mods)
             config.add_section('Game_Version_max')
@@ -310,7 +314,7 @@ class VSUpdate(Language):
         return log
 
     def accueil(self, net_version):
-        if self.gamever_max == '100.0.0':
+        if self.gamever_max == str(100):
             self.version = self.version_max
         else:
             self.version = self.gamever_max
