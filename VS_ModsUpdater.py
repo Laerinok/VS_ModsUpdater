@@ -1,16 +1,17 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Gestion des mods de Vintage Story v.1.0.7:
+Gestion des mods de Vintage Story v.1.0.8:
 Pour NET4 ET NET7
 - Liste les mods installés et vérifie s'il existe une version plus récente et la télécharge
 - Affiche le résumé
 - Crée un fichier updates.log
 - maj des mods pour une version donnée du jeu
 - Verification de la présence d'une maj du script sur moddb
+- Localisation OK
 """
 __author__ = "Laerinok"
-__date__ = "2023-08-04"
+__date__ = "2023-08-09"
 
 
 import configparser
@@ -34,18 +35,18 @@ from rich import print
 
 class Language:
     def __init__(self):
-        self.num_version = '1.0.7'
+        self.num_version = '1.0.8'
         self.url_mods = 'https://mods.vintagestory.at/'
         self.path_lang = "lang"
         # On récupère la langue du système
-        lang = locale.getlocale()
-        lang = str(lang[0])
-        file_lang = f"{lang.split('_')[0]}.json"
-        file_lang_path = os.path.join(self.path_lang, file_lang)
-        if not os.path.isfile(file_lang_path):
-            file_lang_path = os.path.join(self.path_lang, 'en.json')  # on charge en.json si aucun fichier de langue n'est présent
+        # use user's default settings
+        self.loc = locale.setlocale(locale.LC_ALL, '')
+        self.lang = f"{self.loc.split('_')[0].lower()}.json"
+        self.file_lang_path = os.path.join(self.path_lang, self.lang)
+        if not os.path.isfile(self.file_lang_path):
+            self.file_lang_path = os.path.join(self.path_lang, 'english.json')  # on charge en.json si aucun fichier de langue n'est présent
         # On charge le fichier de langue
-        with open(file_lang_path, "r", encoding='utf-8-sig') as lang_json:
+        with open(self.file_lang_path, "r", encoding='utf-8-sig') as lang_json:
             desc = json.load(lang_json)
             self.setconfig = desc['setconfig']
             self.setconfig01 = desc['setconfig01']
@@ -115,6 +116,7 @@ class VSUpdate(Language):
         self.path_config = os.path.join(vsdata_path, 'ModConfig', 'ModsUpdater')
         self.config_file = os.path.join(self.path_config, 'config.ini')
         self.path_temp = "temp"
+        self.path_logs = "logs"
         self.path_mods = os.path.join(vsdata_path, 'Mods')
         self.url_api = 'https://mods.vintagestory.at/api/mod/'
         # Creation des dossiers et fichiers
@@ -399,8 +401,11 @@ class VSUpdate(Language):
         if self.nb_maj > 1:
             print(f'  [yellow]{self.summary1}[/yellow] \n')
             print(f'{self.summary2}')
-            log_filename = f'{netversion}_updates_{datetime.datetime.today().strftime("%Y%m%d_%H%M%S")}.txt'
-            with open(log_filename, 'w', encoding='utf-8-sig') as logfile:
+            log_filename = f'updates_{datetime.datetime.today().strftime("%Y%m%d_%H%M%S")}.txt'
+            if not os.path.isdir(self.path_logs):
+                os.mkdir('logs')
+            log_path = os.path.join(self.path_logs, log_filename)
+            with open(log_path, 'w', encoding='utf-8-sig') as logfile:
                 logfile.write(f'\n\t\t\tMods Vintage Story {netversion} - {self.last_update} : {datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S")}\n\n')
                 for key, value in self.mods_updated.items():
                     # print(f' - [green]{key} {value["url"]} :[/green]')  # affiche en plus l'url du mod
@@ -417,8 +422,11 @@ class VSUpdate(Language):
         elif self.nb_maj == 1:
             print(f'  [yellow]{self.summary3}[/yellow] \n')
             print(f'{self.summary4}')
-            log_filename = f'{netversion}_updates_{datetime.datetime.today().strftime("%Y%m%d_%H%M%S")}.txt'
-            with open(log_filename, 'w', encoding='utf-8-sig') as logfile:
+            log_filename = f'updates_{datetime.datetime.today().strftime("%Y%m%d_%H%M%S")}.txt'
+            if not os.path.isdir(self.path_logs):
+                os.mkdir('logs')
+            log_path = os.path.join(self.path_logs, log_filename)
+            with open(log_path, 'w', encoding='utf-8-sig') as logfile:
                 logfile.write(f'\n\t\t\tMods Vintage Story {netversion} - {self.last_update} : {datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S")}\n\n')
                 for key, value in self.mods_updated.items():
                     # print(f' - [green]{key} {value["url"]} :[/green]')  # affiche en plus l'url du mod
