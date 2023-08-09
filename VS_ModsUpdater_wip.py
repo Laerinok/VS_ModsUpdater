@@ -1,8 +1,7 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Gestion des mods de Vintage Story v.1.0.6:
-Pour NET4 ET NET7
+Mods manager for Vintage Story v.1.0.8:
 - Liste les mods installés et vérifie s'il existe une version plus récente et la télécharge
 - Affiche le résumé
 - Crée un fichier updates.log
@@ -10,21 +9,21 @@ Pour NET4 ET NET7
 - Verification de la présence d'une maj du script sur moddb
 """
 __author__ = "Laerinok"
-__date__ = "2023-08-04"
-
+__date__ = "2023-08-09"
 
 import configparser
 import datetime
 import glob
 import json
-# import locale
+import locale
 import os
 import re
 import shutil
 import sys
-import urllib.request
 import urllib.error
+import urllib.request
 import zipfile
+
 import requests
 import semver
 import wget
@@ -32,22 +31,22 @@ from bs4 import BeautifulSoup
 from rich import print
 
 
-class Language:
-    def __init__(self):
-        self.num_version = '1.0.6'
+class ConfigLoad:
+    def __init__(self, vsdata_path):
+        self.num_version = '1.0.8'
         self.url_mods = 'https://mods.vintagestory.at/'
+        self.path_config = os.path.join(vsdata_path, 'ModConfig', 'ModsUpdater')
+        self.config_file = os.path.join(self.path_config, 'config.ini')
         self.path_lang = "lang"
-        # On récupère la langue
-        self.config_read = configparser.ConfigParser(allow_no_value=True)
-        file_lang = self.config_read.get('Language', 'lang')
-        # lang = locale.getlocale()
-        # lang = str(lang[0])
-        # file_lang = f"{lang.split('_')[0]}.json"
-        file_lang_path = os.path.join(self.path_lang, file_lang)
-        if not os.path.isfile(file_lang_path):
-            file_lang_path = os.path.join(self.path_lang, 'en.json')  # on charge en.json si aucun fichier de langue n'est présent
-        # On charge le fichier de langue
-        with open(file_lang_path, "r", encoding='utf-8-sig') as lang_json:
+        # use user's default settings
+        self.loc = locale.setlocale(locale.LC_ALL, '')
+        self.lang = f"{self.loc.split('_')[0].lower()}.json"
+        self.file_lang_path = os.path.join(self.path_lang, self.lang)
+        print(self.file_lang_path)
+        if not os.path.isfile(self.file_lang_path):
+            self.file_lang_path = os.path.join(self.path_lang, 'english.json')  # load english.json if no other language file is present
+        # load language file
+        with open(self.file_lang_path, "r", encoding='utf-8-sig') as lang_json:
             desc = json.load(lang_json)
             self.setconfig = desc['setconfig']
             self.setconfig01 = desc['setconfig01']
@@ -79,13 +78,12 @@ class Language:
             self.existing_update = desc['existing_update']
 
 
-class MajScript(Language):
-    def __init__(self):
-        # Version du script pour affichage titre.
-        super().__init__()
+class MajScript(ConfigLoad):
+    def __init__(self, vsdata_path):
+        super().__init__(vsdata_path)
 
     def check_update_script(self):
-        # Scrap pour recuperer la derniere version en ligne du script
+        # Scrap to get last version of this script
         url_script = 'https://mods.vintagestory.at/modsupdater#tab-files'
         req_url_script = urllib.request.Request(url_script)
         try:
@@ -108,11 +106,9 @@ class MajScript(Language):
             print(err_url.reason)
 
 
-class VSUpdate(Language):
+class VSUpdate(ConfigLoad):
     def __init__(self, vsdata_path):
-        # ##### Version du script pour affichage titre.
-        super().__init__()
-        # #####
+        super().__init__(vsdata_path)
         # Définition des chemins
         self.path_config = os.path.join(vsdata_path, 'ModConfig', 'ModsUpdater')
         self.config_file = os.path.join(self.path_config, 'config.ini')
@@ -128,10 +124,6 @@ class VSUpdate(Language):
             except FileNotFoundError:
                 os.mkdir(os.path.join(vsdata_path, 'ModConfig'))
                 os.mkdir(self.path_config)
-        # Ancien emplacement du chargement du fichier langue
-        # On charge le fichier config.ini
-        # self.config_read = configparser.ConfigParser(allow_no_value=True)
-        Language()
         # On crée le fichier config.ini si inexistant, puis on sort du programme si on veut ajouter des mods à exclure
         if not os.path.isfile(self.config_file):
             self.set_config_ini()
@@ -140,6 +132,8 @@ class VSUpdate(Language):
             maj_ok = input(f'\t\t{self.first_launch3} ({self.yes}/{self.no}) : ')
             if maj_ok == str(self.no).lower() or maj_ok == str(self.no[0]).lower():
                 sys.exit()
+        # On charge le fichier config.ini
+        self.config_read = configparser.ConfigParser(allow_no_value=True)
         self.config_read.read(self.config_file, encoding='utf-8-sig')
         self.config_path = self.config_read.get('ModPath', 'path')
         self.path_mods = self.config_path
@@ -175,8 +169,6 @@ class VSUpdate(Language):
         with open(self.config_file, "w", encoding="utf-8") as cfgfile:
             # Ajout du contenu
             config = configparser.ConfigParser(allow_no_value=True)
-            config.add_section('Language')
-            config.set('Language', 'lang', 'en.json')
             config.add_section('ModPath')
             config.set('ModPath', 'path', self.path_mods)
             config.add_section('Game_Version_max')
@@ -314,7 +306,7 @@ class VSUpdate(Language):
         return log
 
     def accueil(self, net_version):
-        if self.gamever_max == str(100):
+        if self.gamever_max == '100.0.0':
             self.version = self.version_max
         else:
             self.version = self.gamever_max
@@ -450,19 +442,21 @@ class VSUpdate(Language):
                 print(f' - [red]{modinfo_values[0]} v.{modinfo_values[2]}[/red]')
 
 
-# On cherche les versions installées de Vintage Story (Net4 et/ou NET7)
+# look for installed versions of Vintage Story (Net4/NET7)
 path_VS_net4 = os.path.join(os.getenv('appdata'), 'VintagestoryData')
 path_VS_net7 = os.path.join(os.getenv('appdata'), 'VintagestoryDataNet7')
 if os.path.isdir(path_VS_net4):
-    # On lance l'instance pour net4
+    # run instance for net4
     net4 = VSUpdate(path_VS_net4)
     net4.accueil('Net4')
     net4.mods_exclusion()
     net4.mods_list()
     net4.update_mods()
     net4.resume('Net4')
+
 if os.path.isdir(path_VS_net7):
-    # On lance l'instance pour net7
+    # run instance for net7
+    net7_cfg = ConfigLoad(path_VS_net7)
     net7 = VSUpdate(path_VS_net7)
     net7.accueil('Net7')
     net7.mods_exclusion()
@@ -470,9 +464,9 @@ if os.path.isdir(path_VS_net7):
     net7.update_mods()
     net7.resume('Net7')
 
-# On efface le dossier temp
-try:
+
+# delete temp directory
+if os.path.isdir('temp'):
     shutil.rmtree('temp')
-except OSError as e:
-    print(f"Error:{e.strerror}")
+
 os.system("pause")

@@ -317,7 +317,7 @@ class VSUpdate(Language):
         else:
             self.version = self.gamever_max
         # *** Texte d'accueil ***
-        print(f'\n\n\t\t\t[bold cyan]{self.title} ({net_version}). v.{self.num_version} {self.author}[/bold cyan]')
+        print(f'\n\n\t\t\t[bold cyan]{self.title} - v.{self.num_version} {self.author}[/bold cyan]')
         # On vérifie si une version plus récente du script est en ligne
         maj_script = MajScript()
         maj_script.check_update_script()
