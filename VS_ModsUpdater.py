@@ -1,7 +1,7 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Gestion des mods de Vintage Story v.1.0.8:
+Gestion des mods de Vintage Story v.1.0.9:
 Pour NET4 ET NET7
 - Liste les mods installés et vérifie s'il existe une version plus récente et la télécharge
 - Affiche le résumé
@@ -11,7 +11,7 @@ Pour NET4 ET NET7
 - Localisation OK
 """
 __author__ = "Laerinok"
-__date__ = "2023-08-09"
+__date__ = "2023-08-16"
 
 
 import configparser
@@ -35,7 +35,7 @@ from rich import print
 
 class Language:
     def __init__(self):
-        self.num_version = '1.0.8'
+        self.num_version = '1.0.9'
         self.url_mods = 'https://mods.vintagestory.at/'
         self.path_lang = "lang"
         # On récupère la langue du système
@@ -145,12 +145,14 @@ class VSUpdate(Language):
         self.path_mods = self.config_path
         # Définition des listes
         self.mod_filename = []
+        self.mod_name_list = []
         self.mods_exclu = []
         # Mods_list
-        self.liste_mod_maj = []
+        self.liste_mod_maj_filename = []
         # Définition des dico
         self.mods_updated = {}
         # Définition des variables
+        self.modename = None
         self.nb_maj = 0
         self.gamever_max = self.config_read.get('Game_Version_max', 'version')  # On récupère la version max du jeu pour la maj
         # variables json_correction
@@ -169,6 +171,8 @@ class VSUpdate(Language):
         self.version = ''
         # Update_mods
         self.Path_Changelog = ''
+        # config_file
+        self.exclusion_size = None
 
     def set_config_ini(self):
         # Création du config.ini si inexistant
@@ -249,23 +253,26 @@ class VSUpdate(Language):
         for elem in glob.glob(self.path_mods + "\*.zip"):
             regex_filename = r'.*\\Mods\\(.*)'
             result_filename = re.search(regex_filename, elem, flags=re.IGNORECASE)
-            self.mod_filename.append(result_filename.group(1))
+            self.mod_filename.append(result_filename.group(1).capitalize())
         # On ajoute les fichiers .cs
         for elem_cs in glob.glob(self.path_mods + "\*.cs"):
             regex_filename_cs = r'.*\\Mods\\(.*)'
             result_filename_cs = re.search(regex_filename_cs, elem_cs, flags=re.IGNORECASE)
-            self.mod_filename.append(result_filename_cs.group(1))
+            self.mod_filename.append(result_filename_cs.group(1).capitalize())
         if len(self.mod_filename) == 0:
             print(f"{self.err_list}")
             os.system("pause")
             sys.exit()
+        self.mod_filename.sort()
         return self.mod_filename
 
     @staticmethod
     def compversion(v1, v2):
         regex_ver = '(\d.*)'
+        # regex_ver_zero = '(\d*).(\d*).(\d*).(\d*)'
         ver1 = re.search(regex_ver, v1)
         ver2 = re.search(regex_ver, v2)
+        # print(f'ver1: {ver1.group(0)} - ver2: {ver2.group(0)}')  # debug
         compver = semver.compare(ver1[1], ver2[1])
         return compver
 
@@ -311,7 +318,7 @@ class VSUpdate(Language):
             print(err_url.reason)
         return log
 
-    def accueil(self, net_version):
+    def accueil(self, _net_version):  # le _ en debut permet de lever le message "Parameter 'net_version' value is not used
         if self.gamever_max == '100.0.0':
             self.version = self.version_max
         else:
@@ -322,30 +329,35 @@ class VSUpdate(Language):
         maj_script = MajScript()
         maj_script.check_update_script()
         print(f'\n\t\t\t\t\t\t[cyan]{self.title2}[bold] {self.version}[/bold][/cyan]\n')
-        # print('\n\t\t\t\t\thttps://mods.vintagestory.at/list/mod\n\n')
 
     def mods_exclusion(self):
         # On crée la liste des mods à exclure de la maj
-        for j in range(1, 11):
+        for j in range(1, len(self.config_read.options('Mod_Exclusion')) + 1):
             try:
                 modfile = self.config_read.get('Mod_Exclusion', 'mod' + str(j))
                 if modfile != '':
-                    self.mods_exclu.append(modfile)
+                    self.mods_exclu.append(modfile.capitalize())
+                self.mods_exclu.sort()
             except configparser.NoSectionError:
                 pass
 
     def mods_list(self):
         # Création de la liste des mods à mettre à jour
         # On retire les mods de la liste d'exclusion
-        self.liste_mod_maj = self.liste_complete_mods()
+        self.liste_mod_maj_filename = self.liste_complete_mods()
         for modexclu in self.mods_exclu:
-            if modexclu in self.liste_mod_maj:
-                self.liste_mod_maj.remove(modexclu)
+            if modexclu in self.liste_mod_maj_filename:
+                self.liste_mod_maj_filename.remove(modexclu)  # contient la liste des mods à mettre a jour avec les noms de fichier
+        for elem in self.liste_mod_maj_filename:
+            name = self.extract_modinfo(elem)
+            self.mod_name_list.append(name[0].capitalize())
+            self.mod_name_list.sort()
 
     def update_mods(self):
         # Comparaison et maj des mods
-        for mod_maj in self.liste_mod_maj:
-            modname_value = self.extract_modinfo(mod_maj)[0]
+        self.liste_mod_maj_filename.sort()
+        for mod_maj in self.liste_mod_maj_filename:
+            modname_value = self.extract_modinfo(mod_maj)[0].capitalize()
             version_value = self.extract_modinfo(mod_maj)[2]
             modid_value = self.extract_modinfo(mod_maj)[1]
             if modid_value == '':
@@ -429,7 +441,6 @@ class VSUpdate(Language):
             with open(log_path, 'w', encoding='utf-8-sig') as logfile:
                 logfile.write(f'\n\t\t\tMods Vintage Story {netversion} - {self.last_update} : {datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S")}\n\n')
                 for key, value in self.mods_updated.items():
-                    # print(f' - [green]{key} {value["url"]} :[/green]')  # affiche en plus l'url du mod
                     print(f' - [green]{key} :[/green]')
                     logfile.write(f'\n {key} ({value["url"]}) :\n')  # affiche en plus l'url du mod
                     for log_version, log_txt in value.items():
@@ -445,7 +456,7 @@ class VSUpdate(Language):
 
         if len(self.mods_exclu) == 1:
             modinfo_values = self.extract_modinfo(self.mods_exclu[0])
-            print(f'\n {self.summary6}\n - [red]{modinfo_values[0]} v.{modinfo_values[2]}[/red]')
+            print(f'\n {self.summary6}\n - [red]{modinfo_values[0]} [italic](v.{modinfo_values[2]})[italic][/red]')
         if len(self.mods_exclu) > 1:
             print(f'\n {self.summary7}')
             for k in range(0, len(self.mods_exclu)):
