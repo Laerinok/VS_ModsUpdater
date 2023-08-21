@@ -14,7 +14,7 @@ A faire :
     - Error:The system cannot find the path specified / probablement le chemin du config.ini
 """
 __author__ = "Laerinok"
-__date__ = "2023-08-17"
+__date__ = "2023-08-21"
 
 
 import configparser
