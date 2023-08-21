@@ -474,14 +474,22 @@ class VSUpdate(Language):
 
 lang = Language()
 # On cherche les versions installées de Vintage Story (Net4 et/ou NET7)
-path_VS_net4 = os.path.join(os.getenv('appdata'), 'VintagestoryData')
+path_VS = os.path.join(os.getenv('appdata'), 'VintagestoryData')
 path_VS_net7 = os.path.join(os.getenv('appdata'), 'VintagestoryDataNet7')
-if not os.path.isdir(path_VS_net4):
-    path_VS_net4 = input(f'{lang.datapath}')
 
-if os.path.isdir(path_VS_net4):
+
+def datapath():
+    new_path_data = input(f'{lang.datapath}')
+    return new_path_data
+
+
+while not os.path.isdir(path_VS):
+    path_VS = datapath()
+
+
+if os.path.isdir(path_VS):
     # On lance l'instance pour net4
-    path_VS = path_VS_net4
+    path_VS = path_VS
     net4 = VSUpdate(path_VS)
     net4.accueil('Net4')
     net4.mods_exclusion()
