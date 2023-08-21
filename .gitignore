@@ -1,5 +1,6 @@
 # Ajout perso
 temp/*
+logs/*
 test.py
 VS_ModsUpdater_net4.py
 VS_ModsUpdater_net7.py

@@ -1,7 +1,7 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Gestion des mods de Vintage Story v.1.0.9:
+Gestion des mods de Vintage Story v.1.0.10:
 Pour NET4 ET NET7
 - Liste les mods installés et vérifie s'il existe une version plus récente et la télécharge
 - Affiche le résumé
@@ -9,9 +9,12 @@ Pour NET4 ET NET7
 - maj des mods pour une version donnée du jeu
 - Verification de la présence d'une maj du script sur moddb
 - Localisation OK
+A faire :
+- messages erreur :
+    - Error:The system cannot find the path specified / probablement le chemin du config.ini
 """
 __author__ = "Laerinok"
-__date__ = "2023-08-16"
+__date__ = "2023-08-17"
 
 
 import configparser
@@ -35,7 +38,7 @@ from rich import print
 
 class Language:
     def __init__(self):
-        self.num_version = '1.0.9'
+        self.num_version = '1.0.10'
         self.url_mods = 'https://mods.vintagestory.at/'
         self.path_lang = "lang"
         # On récupère la langue du système
@@ -50,6 +53,7 @@ class Language:
             desc = json.load(lang_json)
             self.setconfig = desc['setconfig']
             self.setconfig01 = desc['setconfig01']
+            self.datapath = desc['datapath']
             self.title = desc['title']
             self.title2 = desc['title2']
             self.version_max = desc['version_max']
@@ -100,7 +104,7 @@ class MajScript(Language):
             # On compare les versions
             result = VSUpdate.compversion(self.num_version, ch_log_ver[1])
             if result == -1:
-                print(f'[red]\t\t{self.existing_update}[/red]{self.url_mods.rstrip("/")}{soup_link_prg["href"]}\n')
+                print(f'[red]\n\t\t{self.existing_update}[/red]{self.url_mods.rstrip("/")}{soup_link_prg["href"]}\n')
 
         except urllib.error.URLError as err_url:
             # Affiche de l'erreur si le lien n'est pas valide
@@ -113,6 +117,7 @@ class VSUpdate(Language):
         super().__init__()
         # #####
         # Définition des chemins
+
         self.path_config = os.path.join(vsdata_path, 'ModConfig', 'ModsUpdater')
         self.config_file = os.path.join(self.path_config, 'config.ini')
         self.path_temp = "temp"
@@ -147,6 +152,7 @@ class VSUpdate(Language):
         self.mod_filename = []
         self.mod_name_list = []
         self.mods_exclu = []
+        self.non_mods_zipfile = []
         # Mods_list
         self.liste_mod_maj_filename = []
         # Définition des dico
@@ -213,7 +219,11 @@ class VSUpdate(Language):
             self.filepath = os.path.join(self.path_mods, file)
             if zipfile.is_zipfile(self.filepath):  # Vérifie si fichier est un Zip valide
                 archive = zipfile.ZipFile(self.filepath, 'r')
-                archive.extract('modinfo.json', self.path_temp)
+                try:
+                    archive.extract('modinfo.json', self.path_temp)
+                except KeyError:
+                    # On crée une liste contenant les fichiers zip qio ne sont pas des mods.
+                    self.non_mods_zipfile.append(file)
                 zipfile.ZipFile.close(archive)
             json_file_path = os.path.join(self.path_temp, "modinfo.json")
             with open(json_file_path, "r", encoding='utf-8-sig') as fichier_json:  # place le contenu du fichier dans une variable pour le tester ensuite avec regex
@@ -249,11 +259,17 @@ class VSUpdate(Language):
         return mod_name, mod_modid, mod_version, self.filepath
 
     def liste_complete_mods(self):
-        # On crée la liste contenant les noms des fichiers zip
+        # On crée la liste contenant les noms des fichiers zip des mods
         for elem in glob.glob(self.path_mods + "\*.zip"):
             regex_filename = r'.*\\Mods\\(.*)'
             result_filename = re.search(regex_filename, elem, flags=re.IGNORECASE)
-            self.mod_filename.append(result_filename.group(1).capitalize())
+            mod_zipfile = zipfile.ZipFile(result_filename.group(0), 'r')
+            with mod_zipfile:
+                try:  # On ajoute uniquement les fichiers zip qui sont des mods
+                    zipfile.ZipFile.getinfo(mod_zipfile, 'modinfo.json')
+                    self.mod_filename.append(result_filename.group(1).capitalize())
+                except KeyError:
+                    pass
         # On ajoute les fichiers .cs
         for elem_cs in glob.glob(self.path_mods + "\*.cs"):
             regex_filename_cs = r'.*\\Mods\\(.*)'
@@ -269,16 +285,13 @@ class VSUpdate(Language):
     @staticmethod
     def compversion(v1, v2):
         regex_ver = '(\d.*)'
-        # regex_ver_zero = '(\d*).(\d*).(\d*).(\d*)'
         ver1 = re.search(regex_ver, v1)
         ver2 = re.search(regex_ver, v2)
-        # print(f'ver1: {ver1.group(0)} - ver2: {ver2.group(0)}')  # debug
         compver = semver.compare(ver1[1], ver2[1])
         return compver
 
     @staticmethod
     def get_max_version(versions):  # uniquement versions stables
-        # print(f'liste versions: {versions}')  # debug
         regexp_max_version = 'v([\d.]*)([\W\w]*)'
         max_version = re.search(regexp_max_version, max(versions))
         max_version = max_version[1]
@@ -379,13 +392,9 @@ class VSUpdate(Language):
                 # On récupère les version du jeu nécessaire pour le mod
                 mod_game_versions = resp_dict['mod']['releases'][0]['tags']
                 mod_game_version_max = self.get_max_version(mod_game_versions)
-                # print(f'ver max: {mod_game_version_max}\n ver max jeu souhaitée {gamever_max}')  # debug
                 # On compare la version max souhaité à la version necessaire pour le mod
                 result_game_version = self.compversion(mod_game_version_max, self.gamever_max)
-                # print(result_compversion)  # debug
-                # print(result_game_version)  # debug
                 if result_game_version == 0 or result_game_version == -1:
-                    # print('on peut mettre à jour')  # debug
                     #  #####
                     if result_compversion == -1:
                         dl_link = os.path.join(self.url_mods, mod_file_onlinepath)
@@ -404,8 +413,7 @@ class VSUpdate(Language):
             except urllib.error.URLError as er:
                 # Affiche de l'erreur si le lien n'est pas valide
                 print(er.reason)
-            except KeyError:  # as err: decommenter pour debugage
-                # print(err.args)  # pour debuggage
+            except KeyError:
                 print(f'[green] {modname_value}[/green]: [red]{self.error} !!! {self.error_modid}[/red]')
 
     def resume(self, netversion):
@@ -450,7 +458,6 @@ class VSUpdate(Language):
                             for line in log_txt:
                                 print(f'\t\t[yellow]* {line}[/yellow]')
                                 logfile.write(f'\t\t* {line}\n')
-
         else:
             print(f'  [yellow]{self.summary5}[/yellow]\n')
 
@@ -465,12 +472,17 @@ class VSUpdate(Language):
                 print(f' - [red]{modinfo_values[0]} v.{modinfo_values[2]}[/red]')
 
 
+lang = Language()
 # On cherche les versions installées de Vintage Story (Net4 et/ou NET7)
 path_VS_net4 = os.path.join(os.getenv('appdata'), 'VintagestoryData')
 path_VS_net7 = os.path.join(os.getenv('appdata'), 'VintagestoryDataNet7')
+if not os.path.isdir(path_VS_net4):
+    path_VS_net4 = input(f'{lang.datapath}')
+
 if os.path.isdir(path_VS_net4):
     # On lance l'instance pour net4
-    net4 = VSUpdate(path_VS_net4)
+    path_VS = path_VS_net4
+    net4 = VSUpdate(path_VS)
     net4.accueil('Net4')
     net4.mods_exclusion()
     net4.mods_list()
@@ -478,7 +490,8 @@ if os.path.isdir(path_VS_net4):
     net4.resume('Net4')
 if os.path.isdir(path_VS_net7):
     # On lance l'instance pour net7
-    net7 = VSUpdate(path_VS_net7)
+    path_VS = path_VS_net7
+    net7 = VSUpdate(path_VS)
     net7.accueil('Net7')
     net7.mods_exclusion()
     net7.mods_list()
@@ -486,8 +499,6 @@ if os.path.isdir(path_VS_net7):
     net7.resume('Net7')
 
 # On efface le dossier temp
-try:
+if os.path.isdir('temp'):
     shutil.rmtree('temp')
-except OSError as e:
-    print(f"Error:{e.strerror}")
 os.system("pause")
