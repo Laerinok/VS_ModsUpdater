@@ -1,7 +1,7 @@
 {
 	"setconfig" : "# To exclude a mod from the update, add the name (with extension) of the mod's zip file after = (ONE per line)",
 	"setconfig01" : "# Select the desired game version (ex: 100.0.0, 1.18, 1.18.1). default: 100.0.0 (to have all versions)",
-	"datapath" : "The \"VintagestoryData\" folder does not exist. Please enter the path : ",
+	"datapath" : "\"Mods\" folder not found. Please enter the right path : ",
 	"title" : "Vintage Story Mod Updater",
 	"title2" : "Max game version:",
 	"version_max" : "Any version",

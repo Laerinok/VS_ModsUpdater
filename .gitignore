@@ -8,6 +8,7 @@ Vintagestory.ico
 Net4_updates*.*
 Net7_updates*.*
 *wip.py
+*.ini
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

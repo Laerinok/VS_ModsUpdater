@@ -1,7 +1,7 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Gestion des mods de Vintage Story v.1.0.10:
+Gestion des mods de Vintage Story v.1.1.0:
 Pour NET4 ET NET7
 - Liste les mods installés et vérifie s'il existe une version plus récente et la télécharge
 - Affiche le résumé
@@ -9,12 +9,9 @@ Pour NET4 ET NET7
 - maj des mods pour une version donnée du jeu
 - Verification de la présence d'une maj du script sur moddb
 - Localisation OK
-A faire :
-- messages erreur :
-    - Error:The system cannot find the path specified / probablement le chemin du config.ini
 """
 __author__ = "Laerinok"
-__date__ = "2023-08-21"
+__date__ = "2023-08-22"
 
 
 import configparser
@@ -34,11 +31,12 @@ import semver
 import wget
 from bs4 import BeautifulSoup
 from rich import print
+from contextlib import redirect_stderr
 
 
 class Language:
     def __init__(self):
-        self.num_version = '1.0.10'
+        self.num_version = '1.1.0'
         self.url_mods = 'https://mods.vintagestory.at/'
         self.path_lang = "lang"
         # On récupère la langue du système
@@ -109,30 +107,26 @@ class MajScript(Language):
         except urllib.error.URLError as err_url:
             # Affiche de l'erreur si le lien n'est pas valide
             print(err_url.reason)
+            with open('errors.log', 'a') as stderr_url, redirect_stderr(stderr_url):
+                print(datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S") + ' : ' + str(err_lang), file=sys.stderr)
 
 
 class VSUpdate(Language):
-    def __init__(self, vsdata_path):
+    def __init__(self, pathmods):
         # ##### Version du script pour affichage titre.
         super().__init__()
         # #####
         # Définition des chemins
-
-        self.path_config = os.path.join(vsdata_path, 'ModConfig', 'ModsUpdater')
-        self.config_file = os.path.join(self.path_config, 'config.ini')
+        # self.path_config = os.path.join(vsdata_path, 'ModConfig', 'ModsUpdater')
+        self.config_file = os.path.join('config.ini')
         self.path_temp = "temp"
         self.path_logs = "logs"
-        self.path_mods = os.path.join(vsdata_path, 'Mods')
+        # self.path_mods = os.path.join(vsdata_path, 'Mods')
+        self.path_mods = pathmods
         self.url_api = 'https://mods.vintagestory.at/api/mod/'
         # Creation des dossiers et fichiers
         if not os.path.isdir(self.path_temp):
             os.mkdir('temp')
-        if not os.path.isdir(self.path_config):
-            try:
-                os.mkdir(self.path_config)
-            except FileNotFoundError:
-                os.mkdir(os.path.join(vsdata_path, 'ModConfig'))
-                os.mkdir(self.path_config)
         # Ancien emplacement du chargement du fichier langue
         Language()
         # On crée le fichier config.ini si inexistant, puis on sort du programme si on veut ajouter des mods à exclure
@@ -329,6 +323,8 @@ class VSUpdate(Language):
         except urllib.error.URLError as err_url:
             # Affiche de l'erreur si le lien n'est pas valide
             print(err_url.reason)
+            with open('errors.log', 'a') as stderr_link, redirect_stderr(stderr_link):
+                print(datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S") + ' : ' + str(err_lang), file=sys.stderr)
         return log
 
     def accueil(self, _net_version):  # le _ en debut permet de lever le message "Parameter 'net_version' value is not used
@@ -353,6 +349,11 @@ class VSUpdate(Language):
                 self.mods_exclu.sort()
             except configparser.NoSectionError:
                 pass
+            except configparser.InterpolationSyntaxError as err_parsing:
+                print(f'Error in config.ini [Mod_Exclusion] mod{str(j)} : {err_parsing}')
+                with open('errors.log', 'a') as stderr_parsing, redirect_stderr(stderr_parsing):
+                    print(datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S") + ' : ' + 'Error in config.ini [Mod_Exclusion] - mod' + str(j) + ' : ' + str(err_parsing), file=sys.stderr)
+                sys.exit()
 
     def mods_list(self):
         # Création de la liste des mods à mettre à jour
@@ -413,6 +414,8 @@ class VSUpdate(Language):
             except urllib.error.URLError as er:
                 # Affiche de l'erreur si le lien n'est pas valide
                 print(er.reason)
+                with open('errors.log', 'a') as stderr_link, redirect_stderr(stderr_link):
+                    print(datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S") + ' : ' + str(err_lang), file=sys.stderr)
             except KeyError:
                 print(f'[green] {modname_value}[/green]: [red]{self.error} !!! {self.error_modid}[/red]')
 
@@ -472,10 +475,22 @@ class VSUpdate(Language):
                 print(f' - [red]{modinfo_values[0]} v.{modinfo_values[2]}[/red]')
 
 
-lang = Language()
+# Efface le fichier errors.log si présent
+if os.path.isfile('errors.log'):
+    os.remove('errors.log')
+
+# Test si il existe un fichier langue. (english par defaut)
+try:
+    lang = Language()
+except OSError as err_lang:
+    print(err_lang, file=sys.stderr)
+    with open('errors.log', 'a') as stderr, redirect_stderr(stderr):
+        print(datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S") + ' : ' + str(err_lang), file=sys.stderr)
+    sys.exit()
+
 # On cherche les versions installées de Vintage Story (Net4 et/ou NET7)
-path_VS = os.path.join(os.getenv('appdata'), 'VintagestoryData')
-path_VS_net7 = os.path.join(os.getenv('appdata'), 'VintagestoryDataNet7')
+path_mods = os.path.join(os.getenv('appdata'), 'VintagestoryData', 'Mods')
+path_mods_net7 = os.path.join(os.getenv('appdata'), 'VintagestoryDataNet7')
 
 
 def datapath():
@@ -483,23 +498,31 @@ def datapath():
     return new_path_data
 
 
-while not os.path.isdir(path_VS):
-    path_VS = datapath()
+# Charge le chemin du dossier data de VS à partir du config.ini si il exsite
+if not os.path.isfile('config.ini'):
+    while not os.path.isdir(path_mods):
+        path_mods = datapath()
+else:
+    # On charge le fichier config.ini
+    config_read = configparser.ConfigParser(allow_no_value=True)
+    config_read.read('config.ini', encoding='utf-8-sig')
+    config_path = config_read.get('ModPath', 'path')
+    path_mods = config_path
 
 
-if os.path.isdir(path_VS):
+if os.path.isdir(path_mods):
     # On lance l'instance pour net4
-    path_VS = path_VS
-    net4 = VSUpdate(path_VS)
+    # path_mods = path_mods
+    net4 = VSUpdate(path_mods)
     net4.accueil('Net4')
     net4.mods_exclusion()
     net4.mods_list()
     net4.update_mods()
     net4.resume('Net4')
-if os.path.isdir(path_VS_net7):
+if os.path.isdir(path_mods_net7):
     # On lance l'instance pour net7
-    path_VS = path_VS_net7
-    net7 = VSUpdate(path_VS)
+    path_mods = path_mods_net7
+    net7 = VSUpdate(path_mods)
     net7.accueil('Net7')
     net7.mods_exclusion()
     net7.mods_list()
