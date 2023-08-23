@@ -22,7 +22,7 @@ This program checks if you have a **_net4_** or **_net7_** version (or both) of 
 
 **Advanced use (via config.ini) :**
 With the config.ini file you can :
-* Change the mod path. I doubt you'll really do it, but it's possible.
+* Change the mod path.
 * Select the maximum version of the game you want to update your mods
 * Exclude some mods of the update process. Usefull for mods for which you must choose a file per config, or if an updated mod doesn't work etc... Just add the name of the zip file (with the extension)
 This is usefull if you have the net4 version of VS and the last version of a mod is for the net7 version of VS.
