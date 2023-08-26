@@ -1,7 +1,7 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Gestion des mods de Vintage Story v.1.1.0:
+Gestion des mods de Vintage Story v.1.1.1:
 Pour NET4 ET NET7
 - Liste les mods installés et vérifie s'il existe une version plus récente et la télécharge
 - Affiche le résumé
@@ -11,7 +11,7 @@ Pour NET4 ET NET7
 - Localisation OK
 """
 __author__ = "Laerinok"
-__date__ = "2023-08-22"
+__date__ = "2023-08-26"
 
 
 import configparser
@@ -36,7 +36,7 @@ from contextlib import redirect_stderr
 
 class Language:
     def __init__(self):
-        self.num_version = '1.1.0'
+        self.num_version = '1.1.1'
         self.url_mods = 'https://mods.vintagestory.at/'
         self.path_lang = "lang"
         # On récupère la langue du système
@@ -97,7 +97,7 @@ class MajScript(Language):
             soup_changelog = soup.find("div", {"class": "changelogtext"})
             soup_link_prg = soup.find("a", {"class": "downloadbutton"})
             # on recupere la version du chanlog
-            regexp_ch_log_ver = '<strong>(.*)</strong>'
+            regexp_ch_log_ver = '<strong>v(.*)</strong>'
             ch_log_ver = re.search(regexp_ch_log_ver, str(soup_changelog))
             # On compare les versions
             result = VSUpdate.compversion(self.num_version, ch_log_ver[1])
@@ -277,11 +277,30 @@ class VSUpdate(Language):
         return self.mod_filename
 
     @staticmethod
+    def verif_formatversion(v1, v2):
+        new_ver1 = []
+        new_ver2 = []
+        ver1 = v1.split('.')
+        for elem in ver1:
+            if len(elem) == 2 and elem[0] == str(0):
+                new_ver1.append(elem[1:])
+            else:
+                new_ver1.append(elem)
+        version1 = f'{new_ver1[0]}.{new_ver1[1]}.{new_ver1[2]}'
+
+        ver2 = v2.split('.')
+        for elem in ver2:
+            if len(elem) == 2 and str(elem[0]) == str(0):
+                new_ver2.append(elem[1:])
+            else:
+                new_ver2.append(elem)
+        version2 = f'{new_ver2[0]}.{new_ver2[1]}.{new_ver2[2]}'
+        return version1, version2
+
+    @staticmethod
     def compversion(v1, v2):
-        regex_ver = '(\d.*)'
-        ver1 = re.search(regex_ver, v1)
-        ver2 = re.search(regex_ver, v2)
-        compver = semver.compare(ver1[1], ver2[1])
+        ver = VSUpdate.verif_formatversion(v1, v2)
+        compver = semver.compare(ver[0], ver[1])
         return compver
 
     @staticmethod
