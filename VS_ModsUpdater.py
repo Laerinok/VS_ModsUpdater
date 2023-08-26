@@ -290,7 +290,7 @@ class VSUpdate(Language):
 
         ver2 = v2.split('.')
         for elem in ver2:
-            if len(elem) > 1 and str(elem[0]) == str(0):
+            if len(elem) == 2 and str(elem[0]) == str(0):
                 new_ver2.append(elem[1:])
             else:
                 new_ver2.append(elem)
