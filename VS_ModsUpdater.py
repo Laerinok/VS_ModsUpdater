@@ -280,10 +280,9 @@ class VSUpdate(Language):
     def verif_formatversion(v1, v2):
         new_ver1 = []
         new_ver2 = []
-
         ver1 = v1.split('.')
         for elem in ver1:
-            if len(elem) > 1 and elem[0] == str(0):
+            if len(elem) == 2 and elem[0] == str(0):
                 new_ver1.append(elem[1:])
             else:
                 new_ver1.append(elem)
