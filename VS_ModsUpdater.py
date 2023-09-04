@@ -1,17 +1,17 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Gestion des mods de Vintage Story v.1.1.1:
-Pour NET4 ET NET7
+Gestion des mods de Vintage Story v.1.1.2:
 - Liste les mods installés et vérifie s'il existe une version plus récente et la télécharge
 - Affiche le résumé
 - Crée un fichier updates.log
 - maj des mods pour une version donnée du jeu
 - Verification de la présence d'une maj du script sur moddb
 - Localisation OK
+- Windows + Linux
 """
 __author__ = "Laerinok"
-__date__ = "2023-08-26"
+__date__ = "2023-09-04"
 
 
 import configparser
@@ -20,6 +20,7 @@ import glob
 import json
 import locale
 import os
+import platform
 import re
 import shutil
 import sys
@@ -36,7 +37,7 @@ from contextlib import redirect_stderr
 
 class Language:
     def __init__(self):
-        self.num_version = '1.1.1'
+        self.num_version = '1.1.2'
         self.url_mods = 'https://mods.vintagestory.at/'
         self.path_lang = "lang"
         # On récupère la langue du système
@@ -507,14 +508,21 @@ except OSError as err_lang:
         print(datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S") + ' : ' + str(err_lang), file=sys.stderr)
     sys.exit()
 
-# On cherche les versions installées de Vintage Story (Net4 et/ou NET7)
-path_mods = os.path.join(os.getenv('appdata'), 'VintagestoryData', 'Mods')
-path_mods_net7 = os.path.join(os.getenv('appdata'), 'VintagestoryDataNet7')
-
 
 def datapath():
     new_path_data = input(f'{lang.datapath}')
     return new_path_data
+
+
+# On récupère le système d'exploitation
+my_os = platform.system()
+print("OS in my system : ", my_os)
+
+if my_os == 'Windows':
+    # On cherche les versions installées de Vintage Story
+    path_mods = os.path.join(os.getenv('appdata'), 'VintagestoryData', 'Mods')
+else:
+    path_mods = datapath()
 
 
 # Charge le chemin du dossier data de VS à partir du config.ini si il exsite
@@ -530,23 +538,13 @@ else:
 
 
 if os.path.isdir(path_mods):
-    # On lance l'instance pour net4
-    # path_mods = path_mods
-    net4 = VSUpdate(path_mods)
-    net4.accueil('Net4')
-    net4.mods_exclusion()
-    net4.mods_list()
-    net4.update_mods()
-    net4.resume('Net4')
-if os.path.isdir(path_mods_net7):
-    # On lance l'instance pour net7
-    path_mods = path_mods_net7
-    net7 = VSUpdate(path_mods)
-    net7.accueil('Net7')
-    net7.mods_exclusion()
-    net7.mods_list()
-    net7.update_mods()
-    net7.resume('Net7')
+    inst = VSUpdate(path_mods)
+    inst.accueil('inst')
+    inst.mods_exclusion()
+    inst.mods_list()
+    inst.update_mods()
+    inst.resume('inst')
+
 
 # On efface le dossier temp
 if os.path.isdir('temp'):
