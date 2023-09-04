@@ -16,7 +16,6 @@ __date__ = "2023-09-04"
 
 import configparser
 import datetime
-import glob
 import json
 import locale
 import os
@@ -30,6 +29,7 @@ import zipfile
 import requests
 import semver
 import wget
+from pathlib import Path
 from bs4 import BeautifulSoup
 from rich import print
 from contextlib import redirect_stderr
@@ -39,14 +39,15 @@ class Language:
     def __init__(self):
         self.num_version = '1.1.2'
         self.url_mods = 'https://mods.vintagestory.at/'
-        self.path_lang = "lang"
+        self.path_lang = Path("lang")
         # On récupère la langue du système
         # use user's default settings
         self.loc = locale.setlocale(locale.LC_ALL, '')
         self.lang = f"{self.loc.split('_')[0].lower()}.json"
-        self.file_lang_path = os.path.join(self.path_lang, self.lang)
-        if not os.path.isfile(self.file_lang_path):
-            self.file_lang_path = os.path.join(self.path_lang, 'english.json')  # on charge en.json si aucun fichier de langue n'est présent
+        # Def des path
+        self.file_lang_path = Path(self.path_lang, self.lang)
+        if not self.file_lang_path.is_file():
+            self.file_lang_path = Path(self.path_lang, 'english.json')  # on charge en.json si aucun fichier de langue n'est présent
         # On charge le fichier de langue
         with open(self.file_lang_path, "r", encoding='utf-8-sig') as lang_json:
             desc = json.load(lang_json)
@@ -118,20 +119,18 @@ class VSUpdate(Language):
         super().__init__()
         # #####
         # Définition des chemins
-        # self.path_config = os.path.join(vsdata_path, 'ModConfig', 'ModsUpdater')
-        self.config_file = os.path.join('config.ini')
-        self.path_temp = "temp"
-        self.path_logs = "logs"
-        # self.path_mods = os.path.join(vsdata_path, 'Mods')
-        self.path_mods = pathmods
+        self.config_file = Path('config.ini')
+        self.path_temp = Path("temp")
+        self.path_logs = Path("logs")
+        self.path_mods = Path(pathmods)
         self.url_api = 'https://mods.vintagestory.at/api/mod/'
         # Creation des dossiers et fichiers
-        if not os.path.isdir(self.path_temp):
+        if not self.path_temp.is_dir():
             os.mkdir('temp')
         # Ancien emplacement du chargement du fichier langue
         Language()
         # On crée le fichier config.ini si inexistant, puis on sort du programme si on veut ajouter des mods à exclure
-        if not os.path.isfile(self.config_file):
+        if not self.config_file.is_file():
             self.set_config_ini()
             print(f'\t\t[bold cyan]{self.first_launch}[/bold cyan]')
             print(f'\t\t[bold cyan]{self.first_launch2}[/bold cyan]')
@@ -141,8 +140,8 @@ class VSUpdate(Language):
         # On charge le fichier config.ini
         self.config_read = configparser.ConfigParser(allow_no_value=True)
         self.config_read.read(self.config_file, encoding='utf-8-sig')
-        self.config_path = self.config_read.get('ModPath', 'path')
-        self.path_mods = self.config_path
+        self.config_path = Path(self.config_read.get('ModPath', 'path'))
+        self.path_mods = Path(self.config_path)
         # Définition des listes
         self.mod_filename = []
         self.mod_name_list = []
@@ -181,7 +180,7 @@ class VSUpdate(Language):
             # Ajout du contenu
             config = configparser.ConfigParser(allow_no_value=True)
             config.add_section('ModPath')
-            config.set('ModPath', 'path', self.path_mods)
+            config.set('ModPath', 'path', str(self.path_mods))
             config.add_section('Game_Version_max')
             config.set('Game_Version_max', self.setconfig01)
             config.set('Game_Version_max', 'version', '100.0.0')
@@ -208,10 +207,10 @@ class VSUpdate(Language):
 
     def extract_modinfo(self, file):
         # On trie les fichiers .zip et .cs
-        type_file = os.path.splitext(file)[1]
+        type_file = Path(file).suffix
         if type_file == '.zip':
             # On extrait le fichier modinfo.json de l'archive et on recupere le modid, name et version
-            self.filepath = os.path.join(self.path_mods, file)
+            self.filepath = Path(self.path_mods, file)
             if zipfile.is_zipfile(self.filepath):  # Vérifie si fichier est un Zip valide
                 archive = zipfile.ZipFile(self.filepath, 'r')
                 try:
@@ -220,7 +219,7 @@ class VSUpdate(Language):
                     # On crée une liste contenant les fichiers zip qio ne sont pas des mods.
                     self.non_mods_zipfile.append(file)
                 zipfile.ZipFile.close(archive)
-            json_file_path = os.path.join(self.path_temp, "modinfo.json")
+            json_file_path = Path(self.path_temp, "modinfo.json")
             with open(json_file_path, "r", encoding='utf-8-sig') as fichier_json:  # place le contenu du fichier dans une variable pour le tester ensuite avec regex
                 content_file = fichier_json.read()
             with open(json_file_path, "r", encoding='utf-8-sig') as fichier_json:
@@ -241,7 +240,7 @@ class VSUpdate(Language):
                     mod_version = json_correct[1]
                     mod_modid = json_correct[2]
         elif type_file == '.cs':
-            self.filepath = os.path.join(self.path_mods, file)
+            self.filepath = Path(self.path_mods, file)
             with open(self.filepath, "r", encoding='utf-8-sig') as fichier_cs:
                 cs_file = fichier_cs.read()
                 regexp_name = '(namespace )(\w*)'
@@ -255,21 +254,17 @@ class VSUpdate(Language):
 
     def liste_complete_mods(self):
         # On crée la liste contenant les noms des fichiers zip des mods
-        for elem in glob.glob(self.path_mods + "\*.zip"):
-            regex_filename = r'.*\\Mods\\(.*)'
-            result_filename = re.search(regex_filename, elem, flags=re.IGNORECASE)
-            mod_zipfile = zipfile.ZipFile(result_filename.group(0), 'r')
+        for elem in self.path_mods.glob('*.zip'):
+            mod_zipfile = zipfile.ZipFile(elem, 'r')
             with mod_zipfile:
                 try:  # On ajoute uniquement les fichiers zip qui sont des mods
                     zipfile.ZipFile.getinfo(mod_zipfile, 'modinfo.json')
-                    self.mod_filename.append(result_filename.group(1).capitalize())
+                    self.mod_filename.append(elem.name.capitalize())
                 except KeyError:
                     pass
         # On ajoute les fichiers .cs
-        for elem_cs in glob.glob(self.path_mods + "\*.cs"):
-            regex_filename_cs = r'.*\\Mods\\(.*)'
-            result_filename_cs = re.search(regex_filename_cs, elem_cs, flags=re.IGNORECASE)
-            self.mod_filename.append(result_filename_cs.group(1).capitalize())
+        for elem_cs in self.path_mods.glob('*.cs'):
+            self.mod_filename.append(elem_cs.name.capitalize())
         if len(self.mod_filename) == 0:
             print(f"{self.err_list}")
             os.system("pause")
@@ -397,12 +392,12 @@ class VSUpdate(Language):
             if modid_value == '':
                 modid_value = re.sub(r'\s', '', modname_value).lower()
             filename_value = self.extract_modinfo(mod_maj)[3]
-            mod_url_api = os.path.join(self.url_api, modid_value)
+            mod_url_api = f'{self.url_api}{modid_value}'
             # On teste la validité du lien url
-            req = urllib.request.Request(mod_url_api)
+            req = urllib.request.Request(str(mod_url_api))
             try:
                 urllib.request.urlopen(req)  # On teste l'existence du lien
-                req_page = requests.get(mod_url_api)
+                req_page = requests.get(str(mod_url_api))
                 resp_dict = req_page.json()
                 mod_asset_id = (resp_dict['mod']['assetid'])
                 mod_last_version = (resp_dict['mod']['releases'][0]['modversion'])
@@ -418,8 +413,8 @@ class VSUpdate(Language):
                 if result_game_version == 0 or result_game_version == -1:
                     #  #####
                     if result_compversion == -1:
-                        dl_link = os.path.join(self.url_mods, mod_file_onlinepath)
-                        resp = requests.get(dl_link, stream=True)
+                        dl_link = Path(self.url_mods, mod_file_onlinepath)
+                        resp = requests.get(str(dl_link), stream=True)
                         file_size = int(resp.headers.get("Content-length"))
                         file_size_mo = round(file_size / (1024 ** 2), 2)
                         print(f'\t{self.compver3}{file_size_mo} {self.compver3a}')
@@ -445,9 +440,9 @@ class VSUpdate(Language):
             print(f'  [yellow]{self.summary1}[/yellow] \n')
             print(f'{self.summary2}')
             log_filename = f'updates_{datetime.datetime.today().strftime("%Y%m%d_%H%M%S")}.txt'
-            if not os.path.isdir(self.path_logs):
+            if not self.path_logs.is_dir():
                 os.mkdir('logs')
-            log_path = os.path.join(self.path_logs, log_filename)
+            log_path = Path(self.path_logs, log_filename)
             with open(log_path, 'w', encoding='utf-8-sig') as logfile:
                 logfile.write(f'\n\t\t\tMods Vintage Story {netversion} - {self.last_update} : {datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S")}\n\n')
                 for key, value in self.mods_updated.items():
@@ -466,9 +461,9 @@ class VSUpdate(Language):
             print(f'  [yellow]{self.summary3}[/yellow] \n')
             print(f'{self.summary4}')
             log_filename = f'updates_{datetime.datetime.today().strftime("%Y%m%d_%H%M%S")}.txt'
-            if not os.path.isdir(self.path_logs):
+            if not self.path_logs.is_dir():
                 os.mkdir('logs')
-            log_path = os.path.join(self.path_logs, log_filename)
+            log_path = Path(self.path_logs, log_filename)
             with open(log_path, 'w', encoding='utf-8-sig') as logfile:
                 logfile.write(f'\n\t\t\tMods Vintage Story {netversion} - {self.last_update} : {datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S")}\n\n')
                 for key, value in self.mods_updated.items():
@@ -496,7 +491,7 @@ class VSUpdate(Language):
 
 
 # Efface le fichier errors.log si présent
-if os.path.isfile('errors.log'):
+if Path('errors.log').is_file():
     os.remove('errors.log')
 
 # Test si il existe un fichier langue. (english par defaut)
@@ -516,28 +511,27 @@ def datapath():
 
 # On récupère le système d'exploitation
 my_os = platform.system()
-print("OS in my system : ", my_os)
 
 if my_os == 'Windows':
     # On cherche les versions installées de Vintage Story
-    path_mods = os.path.join(os.getenv('appdata'), 'VintagestoryData', 'Mods')
+    path_mods = Path(os.getenv('appdata'), 'VintagestoryData', 'Mods')
 else:
-    path_mods = datapath()
+    path_mods = Path(datapath())
 
 
 # Charge le chemin du dossier data de VS à partir du config.ini si il exsite
-if not os.path.isfile('config.ini'):
-    while not os.path.isdir(path_mods):
-        path_mods = datapath()
+if not Path('config.ini').is_file():
+    while not path_mods.is_dir():
+        path_mods = Path(datapath())
 else:
     # On charge le fichier config.ini
     config_read = configparser.ConfigParser(allow_no_value=True)
     config_read.read('config.ini', encoding='utf-8-sig')
     config_path = config_read.get('ModPath', 'path')
-    path_mods = config_path
+    path_mods = Path(config_path)
 
 
-if os.path.isdir(path_mods):
+if path_mods.is_dir():
     inst = VSUpdate(path_mods)
     inst.accueil('inst')
     inst.mods_exclusion()
@@ -547,6 +541,6 @@ if os.path.isdir(path_mods):
 
 
 # On efface le dossier temp
-if os.path.isdir('temp'):
+if Path('temp').is_dir():
     shutil.rmtree('temp')
 os.system("pause")
