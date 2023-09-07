@@ -27,5 +27,6 @@
 	"last_update" : "Dernière mise à jour",
 	"yes" : "Oui",
 	"no" : "Non",
-	"existing_update" : "Nouvelle version du ModsUploader disponible !! "
+	"existing_update" : "Nouvelle version du ModsUploader disponible !! ",
+	"exiting_script" : "Appuyez sur la touche ENTREE pour continuer..."
 }
