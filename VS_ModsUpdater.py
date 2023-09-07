@@ -11,7 +11,7 @@ Gestion des mods de Vintage Story v.1.1.2:
 - Windows + Linux
 """
 __author__ = "Laerinok"
-__date__ = "2023-09-04"
+__date__ = "2023-09-07"
 
 
 import configparser
@@ -80,6 +80,7 @@ class Language:
             self.yes = desc['yes']
             self.no = desc['no']
             self.existing_update = desc['existing_update']
+            self.exiting_script = desc['exiting_script']
 
 
 class MajScript(Language):
@@ -216,7 +217,7 @@ class VSUpdate(Language):
                 try:
                     archive.extract('modinfo.json', self.path_temp)
                 except KeyError:
-                    # On crée une liste contenant les fichiers zip qio ne sont pas des mods.
+                    # On crée une liste contenant les fichiers zip qui ne sont pas des mods.
                     self.non_mods_zipfile.append(file)
                 zipfile.ZipFile.close(archive)
             json_file_path = Path(self.path_temp, "modinfo.json")
@@ -259,12 +260,12 @@ class VSUpdate(Language):
             with mod_zipfile:
                 try:  # On ajoute uniquement les fichiers zip qui sont des mods
                     zipfile.ZipFile.getinfo(mod_zipfile, 'modinfo.json')
-                    self.mod_filename.append(elem.name.capitalize())
+                    self.mod_filename.append(elem.name)
                 except KeyError:
                     pass
         # On ajoute les fichiers .cs
         for elem_cs in self.path_mods.glob('*.cs'):
-            self.mod_filename.append(elem_cs.name.capitalize())
+            self.mod_filename.append(elem_cs.name)
         if len(self.mod_filename) == 0:
             print(f"{self.err_list}")
             os.system("pause")
@@ -360,7 +361,7 @@ class VSUpdate(Language):
             try:
                 modfile = self.config_read.get('Mod_Exclusion', 'mod' + str(j))
                 if modfile != '':
-                    self.mods_exclu.append(modfile.capitalize())
+                    self.mods_exclu.append(modfile)
                 self.mods_exclu.sort()
             except configparser.NoSectionError:
                 pass
@@ -379,14 +380,14 @@ class VSUpdate(Language):
                 self.liste_mod_maj_filename.remove(modexclu)  # contient la liste des mods à mettre a jour avec les noms de fichier
         for elem in self.liste_mod_maj_filename:
             name = self.extract_modinfo(elem)
-            self.mod_name_list.append(name[0].capitalize())
+            self.mod_name_list.append(name[0])
             self.mod_name_list.sort()
 
     def update_mods(self):
         # Comparaison et maj des mods
         self.liste_mod_maj_filename.sort()
         for mod_maj in self.liste_mod_maj_filename:
-            modname_value = self.extract_modinfo(mod_maj)[0].capitalize()
+            modname_value = self.extract_modinfo(mod_maj)[0]
             version_value = self.extract_modinfo(mod_maj)[2]
             modid_value = self.extract_modinfo(mod_maj)[1]
             if modid_value == '':
@@ -413,14 +414,14 @@ class VSUpdate(Language):
                 if result_game_version == 0 or result_game_version == -1:
                     #  #####
                     if result_compversion == -1:
-                        dl_link = Path(self.url_mods, mod_file_onlinepath)
+                        dl_link = f'{self.url_mods}{mod_file_onlinepath}'
                         resp = requests.get(str(dl_link), stream=True)
                         file_size = int(resp.headers.get("Content-length"))
                         file_size_mo = round(file_size / (1024 ** 2), 2)
                         print(f'\t{self.compver3}{file_size_mo} {self.compver3a}')
                         print(f'\t[green] {modname_value} v.{mod_last_version}[/green] {self.compver4}')
                         os.remove(filename_value)
-                        wget.download(dl_link, self.path_mods)
+                        wget.download(dl_link, str(self.path_mods))
                         self.Path_Changelog = f'https://mods.vintagestory.at/show/mod/{mod_asset_id}#tab-files'
                         log_txt = self.get_changelog(self.Path_Changelog)  # On récupère le changelog
                         self.mods_updated[modname_value] = log_txt
@@ -497,7 +498,7 @@ if Path('errors.log').is_file():
 # Test si il existe un fichier langue. (english par defaut)
 try:
     lang = Language()
-except OSError as err_lang:
+except OSError | KeyError as err_lang:
     print(err_lang, file=sys.stderr)
     with open('errors.log', 'a') as stderr, redirect_stderr(stderr):
         print(datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S") + ' : ' + str(err_lang), file=sys.stderr)
@@ -515,8 +516,10 @@ my_os = platform.system()
 if my_os == 'Windows':
     # On cherche les versions installées de Vintage Story
     path_mods = Path(os.getenv('appdata'), 'VintagestoryData', 'Mods')
+if my_os == 'Linux':
+    path_mods = ''
 else:
-    path_mods = Path(datapath())
+    path_mods = ''
 
 
 # Charge le chemin du dossier data de VS à partir du config.ini si il exsite
@@ -530,7 +533,6 @@ else:
     config_path = config_read.get('ModPath', 'path')
     path_mods = Path(config_path)
 
-
 if path_mods.is_dir():
     inst = VSUpdate(path_mods)
     inst.accueil('inst')
@@ -539,8 +541,7 @@ if path_mods.is_dir():
     inst.update_mods()
     inst.resume('inst')
 
-
 # On efface le dossier temp
 if Path('temp').is_dir():
     shutil.rmtree('temp')
-os.system("pause")
+input(lang.exiting_script)
