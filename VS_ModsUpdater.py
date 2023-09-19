@@ -42,12 +42,12 @@ class Language:
         # On récupère la langue du système
         # use user's default settings
         self.loc = locale.setlocale(locale.LC_ALL, '')
-        # print(self.loc)  # debug
-        self.lang = f"{self.loc.split('.')[0].lower()}.json"
+        # print(locale.normalize(self.loc).split('.')[0])  # debug
+        self.lang = f"{locale.normalize(self.loc).split('.')[0]}.json"
         # Def des path
         self.file_lang_path = Path(self.path_lang, self.lang)
         if not self.file_lang_path.is_file():
-            self.file_lang_path = Path(self.path_lang, 'english_united states.json')  # on charge en.json si aucun fichier de langue n'est présent
+            self.file_lang_path = Path(self.path_lang, 'en_US.json')  # on charge en.json si aucun fichier de langue n'est présent
         # On charge le fichier de langue
         with open(self.file_lang_path, "r", encoding='utf-8-sig') as lang_json:
             desc = json.load(lang_json)
