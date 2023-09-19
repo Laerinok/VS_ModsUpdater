@@ -1,7 +1,7 @@
-# !/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Gestion des mods de Vintage Story v.1.1.2:
+Gestion des mods de Vintage Story v.1.1.3:
 - Liste les mods installés et vérifie s'il existe une version plus récente et la télécharge
 - Affiche le résumé
 - Crée un fichier updates.log
@@ -11,11 +11,7 @@ Gestion des mods de Vintage Story v.1.1.2:
 - Windows + Linux
 """
 __author__ = "Laerinok"
-__date__ = "2023-09-07"
-
-# #####
-# TO DO LIST :
-# - Corriger la sortie alphabétique des mods.
+__date__ = "2023-09-19"
 
 import configparser
 import datetime
@@ -40,17 +36,18 @@ from contextlib import redirect_stderr
 
 class Language:
     def __init__(self):
-        self.num_version = '1.1.2'
+        self.num_version = '1.1.3'
         self.url_mods = 'https://mods.vintagestory.at/'
         self.path_lang = Path("lang")
         # On récupère la langue du système
         # use user's default settings
         self.loc = locale.setlocale(locale.LC_ALL, '')
-        self.lang = f"{self.loc.split('_')[0].lower()}.json"
+        # print(self.loc)  # debug
+        self.lang = f"{self.loc.split('.')[0].lower()}.json"
         # Def des path
         self.file_lang_path = Path(self.path_lang, self.lang)
         if not self.file_lang_path.is_file():
-            self.file_lang_path = Path(self.path_lang, 'english.json')  # on charge en.json si aucun fichier de langue n'est présent
+            self.file_lang_path = Path(self.path_lang, 'english_united states.json')  # on charge en.json si aucun fichier de langue n'est présent
         # On charge le fichier de langue
         with open(self.file_lang_path, "r", encoding='utf-8-sig') as lang_json:
             desc = json.load(lang_json)
@@ -273,7 +270,6 @@ class VSUpdate(Language):
             print(f"{self.err_list}")
             os.system("pause")
             sys.exit()
-        self.mod_filename.sort()
         return self.mod_filename
 
     @staticmethod
@@ -384,11 +380,10 @@ class VSUpdate(Language):
         for elem in self.liste_mod_maj_filename:
             name = self.extract_modinfo(elem)
             self.mod_name_list.append(name[0])
-            self.mod_name_list.sort()
 
     def update_mods(self):
         # Comparaison et maj des mods
-        self.liste_mod_maj_filename.sort()
+        self.liste_mod_maj_filename.sort(key=lambda s: s.casefold())
         for mod_maj in self.liste_mod_maj_filename:
             modname_value = self.extract_modinfo(mod_maj)[0]
             version_value = self.extract_modinfo(mod_maj)[2]
@@ -408,7 +403,7 @@ class VSUpdate(Language):
                 mod_file_onlinepath = (resp_dict['mod']['releases'][0]['mainfile'])
                 # compare les versions des mods
                 result_compversion = self.compversion(version_value, mod_last_version)
-                print(f' [green]{modname_value}[/green]: {self.compver1}{version_value} - {self.compver2}{mod_last_version}')
+                print(f' [green]{modname_value[0].upper()}{modname_value[1:]}[/green]: {self.compver1}{version_value} - {self.compver2}{mod_last_version}')
                 # On récupère les version du jeu nécessaire pour le mod
                 mod_game_versions = resp_dict['mod']['releases'][0]['tags']
                 mod_game_version_max = self.get_max_version(mod_game_versions)
@@ -510,6 +505,7 @@ except OSError | KeyError as err_lang:
 
 def datapath():
     new_path_data = input(f'{lang.datapath}')
+    new_path_data = Path(new_path_data)
     return new_path_data
 
 
@@ -519,16 +515,17 @@ my_os = platform.system()
 if my_os == 'Windows':
     # On cherche les versions installées de Vintage Story
     path_mods = Path(os.getenv('appdata'), 'VintagestoryData', 'Mods')
-if my_os == 'Linux':
-    path_mods = ''
+elif my_os == 'Linux':
+    path_mods = Path(Path.home(), '.config', 'VintagestoryData', 'Mods')
 else:
-    path_mods = ''
+    path_mods = None
 
 
 # Charge le chemin du dossier data de VS à partir du config.ini si il exsite
-if not Path('config.ini').is_file():
+config_path = Path(Path.cwd(), 'config.ini')
+if not Path(config_path).is_file():
     while not path_mods.is_dir():
-        path_mods = Path(datapath())
+        path_mods = datapath()
 else:
     # On charge le fichier config.ini
     config_read = configparser.ConfigParser(allow_no_value=True)

@@ -9,6 +9,7 @@ Net4_updates*.*
 Net7_updates*.*
 *wip.py
 *.ini
+/vintagestory-at-chain.pem
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
