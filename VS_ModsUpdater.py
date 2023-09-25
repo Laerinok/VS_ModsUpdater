@@ -11,7 +11,7 @@ Gestion des mods de Vintage Story v.1.1.3:
 - Windows + Linux
 """
 __author__ = "Laerinok"
-__date__ = "2023-09-19"
+__date__ = "2023-09-25"
 
 import configparser
 import datetime
@@ -34,16 +34,24 @@ from rich import print
 from contextlib import redirect_stderr
 
 
-class Language:
+class LanguageChoice:
     def __init__(self):
         self.num_version = '1.1.3'
         self.url_mods = 'https://mods.vintagestory.at/'
         self.path_lang = Path("lang")
         # On récupère la langue du système
-        # use user's default settings
-        self.loc = locale.setlocale(locale.LC_ALL, '')
-        # print(locale.normalize(self.loc).split('.')[0])  # debug
-        self.lang = f"{locale.normalize(self.loc).split('.')[0]}.json"
+        myos = platform.system()
+        if myos == 'Windows':
+            import ctypes
+            windll = ctypes.windll.kernel32
+            try:
+                default_locale = locale.windows_locale[windll.GetUserDefaultLangID()]
+                self.lang = f'{default_locale}.json'
+            except KeyError:
+                self.lang = 'en_US.json'
+        else:
+            self.loc = locale.getlocale()
+            self.lang = f"{self.loc[0]}.json"
         # Def des path
         self.file_lang_path = Path(self.path_lang, self.lang)
         if not self.file_lang_path.is_file():
@@ -83,7 +91,7 @@ class Language:
             self.exiting_script = desc['exiting_script']
 
 
-class MajScript(Language):
+class MajScript(LanguageChoice):
     def __init__(self):
         # Version du script pour affichage titre.
         super().__init__()
@@ -114,7 +122,7 @@ class MajScript(Language):
                 print(datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S") + ' : ' + str(err_lang), file=sys.stderr)
 
 
-class VSUpdate(Language):
+class VSUpdate(LanguageChoice):
     def __init__(self, pathmods):
         # ##### Version du script pour affichage titre.
         super().__init__()
@@ -129,7 +137,7 @@ class VSUpdate(Language):
         if not self.path_temp.is_dir():
             os.mkdir('temp')
         # Ancien emplacement du chargement du fichier langue
-        Language()
+        LanguageChoice()
         # On crée le fichier config.ini si inexistant, puis on sort du programme si on veut ajouter des mods à exclure
         if not self.config_file.is_file():
             self.set_config_ini()
@@ -495,7 +503,7 @@ if Path('errors.log').is_file():
 
 # Test si il existe un fichier langue. (english par defaut)
 try:
-    lang = Language()
+    lang = LanguageChoice()
 except OSError | KeyError as err_lang:
     print(err_lang, file=sys.stderr)
     with open('errors.log', 'a') as stderr, redirect_stderr(stderr):

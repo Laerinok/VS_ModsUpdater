@@ -11,7 +11,7 @@
 	"first_launch3" : "Continuar a atualização ?",
 	"err_list" : "Sem mods na pasta de Mods.\nO programa será encerrado.",
 	"compver1" : "versão instalada : ",
-	"compver2" : "última versão : ",
+	"compver2" : "versão  mais recente: ",
 	"compver3" : "Tamanho do arquivo : ",
 	"compver3a" : "MB",
 	"compver4" : "download em progresso...",
@@ -28,5 +28,5 @@
 	"yes" : "Sim",
 	"no" : "Não",
 	"existing_update" : "Nova versão do Atualizador de Mods do disponível !! ",
-	"exiting_script" : "Aperte a tecla ENTER para continuear..."
+	"exiting_script" : "Aperte a tecla ENTER para concluir.."
 }
