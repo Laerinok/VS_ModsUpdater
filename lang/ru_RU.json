@@ -27,5 +27,6 @@
 	"last_update" : "Последнее обновление",
 	"yes" : "Да",
 	"no" : "нет",
-	"existing_update" : "Доступна новая версия ModsUploader !!"
+	"existing_update" : "Доступна новая версия ModsUploader !!",
+	"exiting_script": "Нажмите клавишу ENTER, чтобы продолжить..."
 }
