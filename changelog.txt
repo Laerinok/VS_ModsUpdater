@@ -1,8 +1,7 @@
 v1.1.4
 - Add Spanish language - Thanks to Sir-Ryu
 - Change russian text.
-
-
+- Possibility of choosing a language other than that of the OS.
 
 v1.1.3
 - Add Brazilian language - Thanks to Yskar
