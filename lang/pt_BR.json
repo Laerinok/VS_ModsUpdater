@@ -28,5 +28,6 @@
 	"yes" : "Sim",
 	"no" : "Não",
 	"existing_update" : "Nova versão do Atualizador de Mods do disponível !! ",
-	"exiting_script" : "Aperte a tecla ENTER para concluir.."
+	"exiting_script" : "Aperte a tecla ENTER para concluir..",
+	"language" : "# Para alterar o idioma padrão, remova o comentário da linha abaixo e defina o idioma desejado (pasta 'lang')"
 }

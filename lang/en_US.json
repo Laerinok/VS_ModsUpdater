@@ -28,5 +28,6 @@
 	"yes" : "Yes",
 	"no" : "No",
 	"existing_update" : "New version of ModsUploader available !! ",
-	"exiting_script" : "Press the ENTER key to continue..."
+	"exiting_script" : "Press the ENTER key to continue...",
+	"language" : "# To change the default language, uncomment the line below and set the desired language ('lang' folder)"
 }

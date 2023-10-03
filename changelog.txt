@@ -1,0 +1,62 @@
+v1.1.4
+- Add Spanish language - Thanks to Sir-Ryu
+- Change russian text.
+- Possibility of choosing a language other than that of the OS.
+
+v1.1.3
+- Add Brazilian language - Thanks to Yskar
+- some fix for language variable
+
+v1.1.2:
+- some fixes and clean old code for net7 experimenal version
+- linux version
+
+v1.1.1:
+- fixed : another versioning issue
+
+v1.1.0:
+- New way to store config information. The config.ini is now created beside the executable instead the modconfig folder. So you can now easlily use a custom path for Mods folder.
+- change text strings in language files
+
+v1.0.10:
+- fixed : crash when a no-mod zip-file was in the mods directory
+- added : you can now use a custom path for VSData
+
+v1.0.9:
+- fixed :  mod's list size was limited to 10.
+- (partly) fixed : Mods list is displayed in alphabetic order (except if the filename and the modname are different)
+
+v1.0.8:
+- Localization should be OK now
+- Logs files are created in the logs directory, not a the root anymore.
+
+v1.0.7:
+- fixed : issue due the fix in v1.0.6
+
+v1.0.6:
+- Fixed : issue when comparing version in -rc or -pre state.
+- added: russian language. Thanks to Vsatan
+
+v1.0.5:
+- Same program for net4 and net7
+- the program can now check if it has a new version
+
+v1.0.4:
+- fixed : error with the exit function after the creation of the config.ini file.
+
+v1.0.3:
+- added : added a step at the first launch of the program for creating the config file.
+- fixed : minor issue due to text format for changelog display
+- added : you can choose the maximum version of the game for updating mods
+
+v1.0.2:
+- .cs mod can be updated now
+- changelog of mod updates are now shown
+- a file update.log is now created at the end of the script.
+
+v1.0.1:
+- fixed error whem comparing versions
+- fix some text errors.
+
+v1.0:
+- First release

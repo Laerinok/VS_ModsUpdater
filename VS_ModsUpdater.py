@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Gestion des mods de Vintage Story v.1.1.3:
+Gestion des mods de Vintage Story v.1.1.4:
 - Liste les mods installés et vérifie s'il existe une version plus récente et la télécharge
 - Affiche le résumé
 - Crée un fichier updates.log
@@ -11,7 +11,7 @@ Gestion des mods de Vintage Story v.1.1.3:
 - Windows + Linux
 """
 __author__ = "Laerinok"
-__date__ = "2023-09-25"
+__date__ = "2023-10-03"
 
 import configparser
 import datetime
@@ -36,22 +36,32 @@ from contextlib import redirect_stderr
 
 class LanguageChoice:
     def __init__(self):
-        self.num_version = '1.1.3'
+        self.num_version = '1.1.4'
         self.url_mods = 'https://mods.vintagestory.at/'
         self.path_lang = Path("lang")
-        # On récupère la langue du système
-        myos = platform.system()
-        if myos == 'Windows':
-            import ctypes
-            windll = ctypes.windll.kernel32
-            try:
-                default_locale = locale.windows_locale[windll.GetUserDefaultLangID()]
-                self.lang = f'{default_locale}.json'
-            except KeyError:
-                self.lang = 'en_US.json'
-        else:
-            self.loc = locale.getlocale()
-            self.lang = f"{self.loc[0]}.json"
+        # Si on définit manuellement la langue via le fichier config
+        self.config_file = Path('config.ini')
+        self.config_read = configparser.ConfigParser(allow_no_value=True)
+        self.config_read.read(self.config_file, encoding='utf-8-sig')
+        # on définit manuellement la langue
+        try:
+            self.config_lang = self.config_read.get('Language', 'language')
+            self.lang = f'{self.config_lang}.json'
+        # Sinon on récupère la langue du système
+        except (configparser.NoOptionError, configparser.NoSectionError):
+            myos = platform.system()
+            if myos == 'Windows':
+                import ctypes
+                windll = ctypes.windll.kernel32
+                try:
+                    default_locale = locale.windows_locale[windll.GetUserDefaultLangID()]
+                    self.lang = f'{default_locale}.json'
+                except KeyError:
+                    self.lang = 'en_US.json'
+            else:
+                self.loc = locale.getlocale()
+                self.lang = f"{self.loc[0]}.json"
+
         # Def des path
         self.file_lang_path = Path(self.path_lang, self.lang)
         if not self.file_lang_path.is_file():
@@ -89,6 +99,7 @@ class LanguageChoice:
             self.no = desc['no']
             self.existing_update = desc['existing_update']
             self.exiting_script = desc['exiting_script']
+            self.language_comment = desc['language']
 
 
 class MajScript(LanguageChoice):
@@ -190,6 +201,9 @@ class VSUpdate(LanguageChoice):
             config = configparser.ConfigParser(allow_no_value=True)
             config.add_section('ModPath')
             config.set('ModPath', 'path', str(self.path_mods))
+            config.add_section('Language')
+            config.set('Language', str(self.language_comment))
+            config.set('Language', '#language', 'fr_FR')
             config.add_section('Game_Version_max')
             config.set('Game_Version_max', self.setconfig01)
             config.set('Game_Version_max', 'version', '100.0.0')
