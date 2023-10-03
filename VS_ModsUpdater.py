@@ -43,11 +43,12 @@ class LanguageChoice:
         self.config_file = Path('config.ini')
         self.config_read = configparser.ConfigParser(allow_no_value=True)
         self.config_read.read(self.config_file, encoding='utf-8-sig')
+        # on définit manuellement la langue
         try:
-            self.config_lang = Path(self.config_read.get('Language', 'language'))
+            self.config_lang = self.config_read.get('Language', 'language')
             self.lang = f'{self.config_lang}.json'
+        # Sinon on récupère la langue du système
         except (configparser.NoOptionError, configparser.NoSectionError):
-            # On récupère la langue du système
             myos = platform.system()
             if myos == 'Windows':
                 import ctypes
