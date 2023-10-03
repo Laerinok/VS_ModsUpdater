@@ -28,5 +28,6 @@
 	"yes" : "Oui",
 	"no" : "Non",
 	"existing_update" : "Nouvelle version du ModsUploader disponible !! ",
-	"exiting_script" : "Appuyez sur la touche ENTREE pour continuer..."
+	"exiting_script" : "Appuyez sur la touche ENTREE pour continuer...",
+	"language" : "# Pour changer la langue par défaut, décommentez la ligne ci-dessous et définissez la langue souhaitée (dossier 'lang')."
 }
