@@ -3,7 +3,7 @@
 	"setconfig01" : "# Sélectionner la version du jeu désirée (ex: 100.0.0, 1.18, 1.18.1). défaut : 100.0.0 (pour avoir toutes les versions)",
 	"datapath" : "Dossier \"Mods\" introuvable. Veuillez saisir le chemin d'accès : ",
 	"title" : "Programme de mise à jour des mods de Vintage Story",
-	"title2" : "Dernière version du jeu: ",
+	"title2" : "Version max du jeu: ",
 	"version_max" : "Toute version",
 	"author" : "par Laerinok",
 	"first_launch" : "Première exécution du programme, création du fichier config.ini effectuée.",
