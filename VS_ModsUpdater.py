@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Gestion des mods de Vintage Story v.1.1.4:
+Gestion des mods de Vintage Story v.1.1.5:
 - Liste les mods installés et vérifie s'il existe une version plus récente et la télécharge
 - Affiche le résumé
 - Crée un fichier updates.log
@@ -11,7 +11,7 @@ Gestion des mods de Vintage Story v.1.1.4:
 - Windows + Linux
 """
 __author__ = "Laerinok"
-__date__ = "2023-10-03"
+__date__ = "2023-10-04"
 
 import argparse
 import configparser
@@ -37,7 +37,7 @@ from contextlib import redirect_stderr
 
 class LanguageChoice:
     def __init__(self):
-        self.num_version = '1.1.4'
+        self.num_version = '1.1.5'
         self.url_mods = 'https://mods.vintagestory.at/'
         self.path_lang = Path("lang")
         # Si on définit manuellement la langue via le fichier config
