@@ -1,5 +1,6 @@
 v1.1.5
 - fixed french typo
+- for server : now the script can be executed in command line with arguments.
 
 v1.1.4
 - Add Spanish language - Thanks to Sir-Ryu

@@ -3,7 +3,7 @@
 	"setconfig01" : "# Selecione a versão desejada do jogo (ex: 100.0.0, 1.18, 1.18.1). padrão: 100.0.0 (para ter acesso a todas as versões)",
 	"datapath" : "A pasta \"Mods\" não foi encontrada. Favor indicar o caminho correto : ",
 	"title" : "Atualizador de Mods do Vintage Story",
-	"title2" : "Não atualize mods para uma versão do jogo superior a",
+	"title2" : "Limite as atualizações do mod à versão do jogo :",
 	"version_max" : "Última versão",
 	"author" : "por Laerinok",
 	"first_launch" : "Primeira execução do programa, criação do arquivo config.ini concluído.",

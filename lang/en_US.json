@@ -3,7 +3,7 @@
 	"setconfig01" : "# Select the desired game version (ex: 100.0.0, 1.18, 1.18.1). default: 100.0.0 (to have all versions)",
 	"datapath" : "\"Mods\" folder not found. Please enter the right path : ",
 	"title" : "Vintage Story Mod Updater",
-	"title2" : "Do not update mods for a version of the game higher than",
+	"title2" : "Limit mod updates to game version :",
 	"version_max" : "Latest version",
 	"author" : "by Laerinok",
 	"first_launch" : "First execution of the program, creation of the config.ini file done.",

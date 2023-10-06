@@ -11,7 +11,7 @@ Gestion des mods de Vintage Story v.1.1.5:
 - Windows + Linux
 """
 __author__ = "Laerinok"
-__date__ = "2023-10-04"
+__date__ = "2023-10-06"
 
 import argparse
 import configparser
@@ -19,6 +19,7 @@ import datetime
 import json
 import locale
 import os
+import pathlib
 import platform
 import re
 import shutil
@@ -528,10 +529,10 @@ class VSUpdate(LanguageChoice):
 
 # Définitions des arguments
 argParser = argparse.ArgumentParser()
-argParser.add_argument("--modspath", help='Enter the mods directory', required=False)
+argParser.add_argument("--modspath", help='Enter the mods directory (in quotes)', required=False, type=pathlib.Path)
 argParser.add_argument("--language", help='Set the language file', required=False)
-argParser.add_argument("--nopause", help="Disable the pause at the end of the script", choices=[False, True], required=False, default=False, type=bool)
-argParser.add_argument("--exclusion", help="Write filenames with extension of mods you want to exclude (separated by space)", nargs="+")
+argParser.add_argument("--nopause", help="Disable the pause at the end of the script", choices=['false', 'true'], type = str.lower, required=False, default='false')
+argParser.add_argument("--exclusion", help="Write filenames of mods with extension (in quotes) you want to exclude (each mod separated by space)", nargs="+")
 args = argParser.parse_args()
 # Fin des arguments
 
@@ -558,7 +559,6 @@ def datapath():
 # On récupère le dossier des mods par argument, sinon on definit par defaut
 if args.modspath:
     path_mods = Path(args.modspath)
-    # print(f'modspath: {path_mods}')  # Debug
 else:
     my_os = platform.system()
     if my_os == 'Windows':
@@ -595,5 +595,5 @@ if path_mods.is_dir():
 if Path('temp').is_dir():
     shutil.rmtree('temp')
 # Fin du script. Désactive la pause si script lancé en ligne de commande.
-if args.nopause is False:
+if args.nopause == 'false':
     input(lang.exiting_script)
