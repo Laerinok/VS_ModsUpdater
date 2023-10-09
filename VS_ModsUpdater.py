@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Gestion des mods de Vintage Story v.1.1.5:
+Gestion des mods de Vintage Story v.1.2.0:
 - Liste les mods installés et vérifie s'il existe une version plus récente et la télécharge
 - Affiche le résumé
 - Crée un fichier updates.log
-- maj des mods pour une version donnée du jeu
+- maj des mods pour une version limite du jeu
 - Verification de la présence d'une maj du script sur moddb
 - Localisation OK
 - Windows + Linux
+- execution du script par ligne de commande pour serveur.
 """
 __author__ = "Laerinok"
-__date__ = "2023-10-06"
+__date__ = "2023-10-09"
 
 import argparse
 import configparser
@@ -38,7 +39,7 @@ from contextlib import redirect_stderr
 
 class LanguageChoice:
     def __init__(self):
-        self.num_version = '1.1.5'
+        self.num_version = '1.2.0'
         self.url_mods = 'https://mods.vintagestory.at/'
         self.path_lang = Path("lang")
         # Si on définit manuellement la langue via le fichier config
@@ -531,7 +532,7 @@ class VSUpdate(LanguageChoice):
 argParser = argparse.ArgumentParser()
 argParser.add_argument("--modspath", help='Enter the mods directory (in quotes)', required=False, type=pathlib.Path)
 argParser.add_argument("--language", help='Set the language file', required=False)
-argParser.add_argument("--nopause", help="Disable the pause at the end of the script", choices=['false', 'true'], type = str.lower, required=False, default='false')
+argParser.add_argument("--nopause", help="Disable the pause at the end of the script", choices=['false', 'true'], type=str.lower, required=False, default='false')
 argParser.add_argument("--exclusion", help="Write filenames of mods with extension (in quotes) you want to exclude (each mod separated by space)", nargs="+")
 args = argParser.parse_args()
 # Fin des arguments
