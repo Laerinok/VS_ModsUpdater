@@ -1,23 +1,26 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Gestion des mods de Vintage Story v.1.1.4:
+Gestion des mods de Vintage Story v.1.2.0:
 - Liste les mods installés et vérifie s'il existe une version plus récente et la télécharge
 - Affiche le résumé
 - Crée un fichier updates.log
-- maj des mods pour une version donnée du jeu
+- maj des mods pour une version limite du jeu
 - Verification de la présence d'une maj du script sur moddb
 - Localisation OK
 - Windows + Linux
+- execution du script par ligne de commande pour serveur.
 """
 __author__ = "Laerinok"
-__date__ = "2023-10-03"
+__date__ = "2023-10-09"
 
+import argparse
 import configparser
 import datetime
 import json
 import locale
 import os
+import pathlib
 import platform
 import re
 import shutil
@@ -36,31 +39,36 @@ from contextlib import redirect_stderr
 
 class LanguageChoice:
     def __init__(self):
-        self.num_version = '1.1.4'
+        self.num_version = '1.2.0'
         self.url_mods = 'https://mods.vintagestory.at/'
         self.path_lang = Path("lang")
         # Si on définit manuellement la langue via le fichier config
         self.config_file = Path('config.ini')
         self.config_read = configparser.ConfigParser(allow_no_value=True)
         self.config_read.read(self.config_file, encoding='utf-8-sig')
-        # on définit manuellement la langue
-        try:
-            self.config_lang = self.config_read.get('Language', 'language')
-            self.lang = f'{self.config_lang}.json'
-        # Sinon on récupère la langue du système
-        except (configparser.NoOptionError, configparser.NoSectionError):
-            myos = platform.system()
-            if myos == 'Windows':
-                import ctypes
-                windll = ctypes.windll.kernel32
-                try:
-                    default_locale = locale.windows_locale[windll.GetUserDefaultLangID()]
-                    self.lang = f'{default_locale}.json'
-                except KeyError:
-                    self.lang = 'en_US.json'
-            else:
-                self.loc = locale.getlocale()
-                self.lang = f"{self.loc[0]}.json"
+        # On vérifie si args.language existe
+        if args.language:
+            self.lang = f'{args.language}.json'
+        # Sinon on récupère manuellement la langue vvia config.ini
+        else:
+            try:
+                self.config_lang = self.config_read.get('Language', 'language')
+                self.lang = f'{self.config_lang}.json'
+
+            # ou on récupère la langue du système
+            except (configparser.NoOptionError, configparser.NoSectionError):
+                myos = platform.system()
+                if myos == 'Windows':
+                    import ctypes
+                    windll = ctypes.windll.kernel32
+                    try:
+                        default_locale = locale.windows_locale[windll.GetUserDefaultLangID()]
+                        self.lang = f'{default_locale}.json'
+                    except KeyError:
+                        self.lang = 'en_US.json'
+                else:
+                    self.loc = locale.getlocale()
+                    self.lang = f"{self.loc[0]}.json"
 
         # Def des path
         self.file_lang_path = Path(self.path_lang, self.lang)
@@ -148,15 +156,17 @@ class VSUpdate(LanguageChoice):
         if not self.path_temp.is_dir():
             os.mkdir('temp')
         # Ancien emplacement du chargement du fichier langue
-        LanguageChoice()
-        # On crée le fichier config.ini si inexistant, puis on sort du programme si on veut ajouter des mods à exclure
+        # LanguageChoice()
+        # On crée le fichier config.ini si inexistant, puis (si lancement du script via l'executable et non en ligne de commande) on sort du programme si on veut ajouter des mods à exclure
         if not self.config_file.is_file():
             self.set_config_ini()
-            print(f'\t\t[bold cyan]{self.first_launch}[/bold cyan]')
-            print(f'\t\t[bold cyan]{self.first_launch2}[/bold cyan]')
-            maj_ok = input(f'\t\t{self.first_launch3} ({self.yes}/{self.no}) : ')
-            if maj_ok == str(self.no).lower() or maj_ok == str(self.no[0]).lower():
-                sys.exit()
+            if not args.modspath:
+                print(f'\t\t[bold cyan]{self.first_launch}[/bold cyan]')
+                print(f'\t\t[bold cyan]{self.first_launch2}[/bold cyan]')
+                maj_ok = input(f'\t\t{self.first_launch3} ({self.yes}/{self.no}) : ')
+                if maj_ok == str(self.no).lower() or maj_ok == str(self.no[0]).lower():
+                    sys.exit()
+
         # On charge le fichier config.ini
         self.config_read = configparser.ConfigParser(allow_no_value=True)
         self.config_read.read(self.config_file, encoding='utf-8-sig')
@@ -203,14 +213,21 @@ class VSUpdate(LanguageChoice):
             config.set('ModPath', 'path', str(self.path_mods))
             config.add_section('Language')
             config.set('Language', str(self.language_comment))
-            config.set('Language', '#language', 'fr_FR')
+            if args.language:
+                config.set('Language', 'language', args.language)  # from command line
+            else:
+                config.set('Language', '#language', 'fr_FR')
             config.add_section('Game_Version_max')
             config.set('Game_Version_max', self.setconfig01)
             config.set('Game_Version_max', 'version', '100.0.0')
             config.add_section('Mod_Exclusion')
             config.set('Mod_Exclusion', self.setconfig)
-            for i in range(1, 11):
-                config.set('Mod_Exclusion', 'mod' + str(i), '')
+            if args.exclusion:
+                for i in range(0, len(args.exclusion)):
+                    config.set('Mod_Exclusion', 'mod' + str(i+1), args.exclusion[i])
+            else:
+                for i in range(1, 11):
+                    config.set('Mod_Exclusion', 'mod' + str(i), '')
             config.write(cfgfile)
 
     def json_correction(self, txt_json):
@@ -511,6 +528,15 @@ class VSUpdate(LanguageChoice):
                 print(f' - [red]{modinfo_values[0]} v.{modinfo_values[2]}[/red]')
 
 
+# Définitions des arguments
+argParser = argparse.ArgumentParser()
+argParser.add_argument("--modspath", help='Enter the mods directory (in quotes)', required=False, type=pathlib.Path)
+argParser.add_argument("--language", help='Set the language file', required=False)
+argParser.add_argument("--nopause", help="Disable the pause at the end of the script", choices=['false', 'true'], type=str.lower, required=False, default='false')
+argParser.add_argument("--exclusion", help="Write filenames of mods with extension (in quotes) you want to exclude (each mod separated by space)", nargs="+")
+args = argParser.parse_args()
+# Fin des arguments
+
 # Efface le fichier errors.log si présent
 if Path('errors.log').is_file():
     os.remove('errors.log')
@@ -531,23 +557,26 @@ def datapath():
     return new_path_data
 
 
-# On récupère le système d'exploitation
-my_os = platform.system()
-
-if my_os == 'Windows':
-    # On cherche les versions installées de Vintage Story
-    path_mods = Path(os.getenv('appdata'), 'VintagestoryData', 'Mods')
-elif my_os == 'Linux':
-    path_mods = Path(Path.home(), '.config', 'VintagestoryData', 'Mods')
+# On récupère le dossier des mods par argument, sinon on definit par defaut
+if args.modspath:
+    path_mods = Path(args.modspath)
 else:
-    path_mods = None
+    my_os = platform.system()
+    if my_os == 'Windows':
+        # On cherche les versions installées de Vintage Story
+        path_mods = Path(os.getenv('appdata'), 'VintagestoryData', 'Mods')
+    elif my_os == 'Linux':
+        path_mods = Path(Path.home(), '.config', 'VintagestoryData', 'Mods')
+    else:
+        path_mods = None
 
 
 # Charge le chemin du dossier data de VS à partir du config.ini si il exsite
 config_path = Path(Path.cwd(), 'config.ini')
 if not Path(config_path).is_file():
-    while not path_mods.is_dir():
-        path_mods = datapath()
+    if not args.modspath:
+        while not path_mods.is_dir():
+            path_mods = datapath()
 else:
     # On charge le fichier config.ini
     config_read = configparser.ConfigParser(allow_no_value=True)
@@ -566,4 +595,6 @@ if path_mods.is_dir():
 # On efface le dossier temp
 if Path('temp').is_dir():
     shutil.rmtree('temp')
-input(lang.exiting_script)
+# Fin du script. Désactive la pause si script lancé en ligne de commande.
+if args.nopause == 'false':
+    input(lang.exiting_script)
