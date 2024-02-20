@@ -1,3 +1,6 @@
+v1.3.0
+- added: abilitie to export your mod list in a pdf file
+- a few minor code clean-ups
 
 v1.2.0
 - fixed french typo
