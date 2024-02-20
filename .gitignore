@@ -10,6 +10,7 @@ Net4_updates*.*
 Net7_updates*.*
 *wip.py
 *.ini
+*.pdf
 /vintagestory-at-chain.pem
 
 
