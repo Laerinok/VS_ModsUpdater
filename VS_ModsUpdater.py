@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Gestion des mods de Vintage Story v.1.2.0:
+Gestion des mods de Vintage Story v.1.3.0-rc1:
 - Liste les mods installés et vérifie s'il existe une version plus récente et la télécharge
 - Affiche le résumé
 - Crée un fichier updates.log
@@ -45,7 +45,7 @@ from rich import print
 
 class LanguageChoice:
     def __init__(self):
-        self.num_version = '1.3.0'
+        self.num_version = '1.3.0-rc1'
         self.url_mods = 'https://mods.vintagestory.at/'
         self.path_lang = Path("lang")
         # Si on définit manuellement la langue via le fichier config
