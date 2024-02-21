@@ -13,7 +13,7 @@ Vintage Story mod management:
 """
 __author__ = "Laerinok"
 __date__ = "2023-02-21"
-__version__ = "1.3.0-rc1"
+__version__ = "1.3.0"
 
 import argparse
 import configparser
