@@ -1,6 +1,6 @@
 v1.3.0
-- Possibility of generating a pdf file of the mod list
-- a few minor code clean-ups
+- Optional : You can now generate a pdf file of your mod list
+- some code clean-up and optimization
 
 v1.2.0
 - fixed french typo
