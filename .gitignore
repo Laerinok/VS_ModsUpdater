@@ -12,6 +12,7 @@ Net7_updates*.*
 *.ini
 *.pdf
 /vintagestory-at-chain.pem
+PyInstaller/
 
 
 # Byte-compiled / optimized / DLL files

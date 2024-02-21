@@ -1,5 +1,5 @@
 v1.3.0
-- added: abilitie to export your mod list in a pdf file
+- Possibility of generating a pdf file of the mod list
 - a few minor code clean-ups
 
 v1.2.0

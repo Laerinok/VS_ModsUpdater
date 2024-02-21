@@ -1,6 +1,6 @@
 {
 	"setconfig" : "# Para um mod não ser atualizado, adicione o nome (com extensão) do arquivo zip do mod depois do \"=\" (UM por linha)",
-	"setconfig01" : "# Selecione a versão desejada do jogo (ex: 100.0.0, 1.18, 1.18.1). padrão: 100.0.0 (para ter acesso a todas as versões)",
+	"setconfig01" : "# Selecione a versão máxima do jogo para a qual os mods podem ser atualizados (ex: 100.0.0, 1.18, 1.18.1). padrão: 100.0.0 (para ter acesso a todas as versões)",
 	"datapath" : "A pasta \"Mods\" não foi encontrada. Favor indicar o caminho correto",
 	"title" : "Atualizador de Mods do Vintage Story",
 	"title2" : "Limite as atualizações do mod à versão do jogo",
@@ -35,5 +35,6 @@
 	"addingmodsinprogress" : "Adicionando mods atuais...",
 	"makingpdfended" : "Criação de arquivo PDF concluída.",
 	"pdfTitle" : "Lista de mods instalados",
-	"ErrorCreationPDF" : "Não foi possível criar o arquivo. Verifique se ele já não está aberto."
+	"ErrorCreationPDF" : "Não foi possível criar o arquivo. Verifique se ele já não está aberto.",
+	"end_of_prg" : "O ModsUpdater será fechado agora"
 }

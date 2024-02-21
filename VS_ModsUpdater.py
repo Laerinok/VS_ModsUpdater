@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Gestion des mods de Vintage Story :
-- Liste les mods installés et vérifie s'il existe une version plus récente et la télécharge
-- Affiche le résumé
-- Crée un fichier updates.log
-- maj des mods pour une version limite du jeu
-- Verification de la présence d'une maj du script sur moddb
-- Localisation OK
+Vintage Story mod management:
+- Lists installed mods, checks for newer versions and downloads them
+- Displays summary
+- Creates an updates.log file
+- You can limit the game version for mod updates
+- Check for script updates on moddb
 - Windows + Linux
-- execution du script par ligne de commande pour serveur.
-- option pour generer un pdf de la liste des mods
+- script execution by command line for server.
+- Possibility of generating a pdf file of the mod list
 """
 __author__ = "Laerinok"
-__date__ = "2023-02-20"
+__date__ = "2023-02-21"
 __version__ = "1.3.0-rc1"
 
 import argparse
@@ -29,6 +28,7 @@ import platform
 import re
 import shutil
 import sys
+import time
 import urllib.error
 import urllib.request
 import zipfile
@@ -42,6 +42,7 @@ import wget
 from bs4 import BeautifulSoup
 from fpdf import FPDF, YPos, XPos
 from rich import print
+from rich.prompt import Prompt
 
 
 class LanguageChoice:
@@ -121,6 +122,10 @@ class LanguageChoice:
             self.makingpdfended = desc['makingpdfended']
             self.pdfTitle = desc['pdfTitle']
             self.ErrorCreationPDF = desc['ErrorCreationPDF']
+            self.end_of_prg = desc['end_of_prg']
+
+        # On crée une liste pour les réponses O/N
+        self.list_yesno = [self.yes.lower(), self.no.lower(), self.yes[0].lower(), self.no[0].lower()]
 
 
 class MajScript(LanguageChoice):
@@ -178,8 +183,10 @@ class VSUpdate(LanguageChoice):
             if not args.modspath:
                 print(f'\t\t[bold cyan]{self.first_launch}[/bold cyan]')
                 print(f'\t\t[bold cyan]{self.first_launch2}[/bold cyan]')
-                maj_ok = input(f'\t\t{self.first_launch3} ({self.yes}/{self.no}) : ')
-                if maj_ok == str(self.no).lower() or maj_ok == str(self.no[0]).lower():
+                maj_ok = Prompt.ask(f'\n\t\t{self.first_launch3}', choices=[self.list_yesno[0], self.list_yesno[1], self.list_yesno[2], self.list_yesno[3]])
+                if maj_ok == self.list_yesno[1] or maj_ok == self.list_yesno[3]:
+                    print(f'{lang.end_of_prg} ')
+                    time.sleep(2)
                     sys.exit()
 
         # On charge le fichier config.ini
@@ -200,6 +207,7 @@ class VSUpdate(LanguageChoice):
         self.modename = None
         self.nb_maj = 0
         self.gamever_max = self.config_read.get('Game_Version_max', 'version')  # On récupère la version max du jeu pour la maj
+        self.modinfo_content = None
         # variables json_correction
         self.name_json = ''
         self.version_json = ''
@@ -264,36 +272,27 @@ class VSUpdate(LanguageChoice):
         # On trie les fichiers .zip et .cs
         type_file = Path(file).suffix
         if type_file == '.zip':
-            # On extrait le fichier modinfo.json de l'archive et on recupere le modid, name et version
+            # On lit le fichier modinfo.json de l'archive et on recupere le modid, name et version
             self.filepath = Path(self.path_mods, file)
             if zipfile.is_zipfile(self.filepath):  # Vérifie si fichier est un Zip valide
-                archive = zipfile.ZipFile(self.filepath, 'r')
-                try:
-                    archive.extract('modinfo.json', self.path_temp)
-                except KeyError:
-                    # On crée une liste contenant les fichiers zip qui ne sont pas des mods.
-                    self.non_mods_zipfile.append(file)
-                zipfile.ZipFile.close(archive)
-            json_file_path = Path(self.path_temp, "modinfo.json")
-            with open(json_file_path, "r", encoding='utf-8-sig') as fichier_json:  # place le contenu du fichier dans une variable pour le tester ensuite avec regex
-                content_file = fichier_json.read()
-            with open(json_file_path, "r", encoding='utf-8-sig') as fichier_json:
-                try:
-                    des = json.load(fichier_json)
-                    regex_name = r'name'
-                    result_name = re.search(regex_name, content_file, flags=re.IGNORECASE)
-                    regex_modid = r'modid'
-                    result_modid = re.search(regex_modid, content_file, flags=re.IGNORECASE)
-                    regex_version = r'version'
-                    result_version = re.search(regex_version, content_file, flags=re.IGNORECASE)
-                    mod_name = des[result_name.group()]
-                    mod_modid = des[result_modid.group()]
-                    mod_version = des[result_version.group()]
-                except Exception:
-                    json_correct = self.json_correction(content_file)
-                    mod_name = json_correct[0]
-                    mod_version = json_correct[1]
-                    mod_modid = json_correct[2]
+                with zipfile.ZipFile(self.filepath) as fichier_zip:
+                    with fichier_zip.open('modinfo.json') as modinfo_json:
+                        self.modinfo_content = modinfo_json.read().decode('utf-8-sig')
+            try:
+                regex_name = r'"name": "(.*)",'
+                result_name = re.search(regex_name, self.modinfo_content, flags=re.IGNORECASE)
+                regex_modid = r'"modid": "(.*)",'
+                result_modid = re.search(regex_modid, self.modinfo_content, flags=re.IGNORECASE)
+                regex_version = r'"version": "(.*)",'
+                result_version = re.search(regex_version, self.modinfo_content, flags=re.IGNORECASE)
+                mod_name = result_name.group(1)
+                mod_modid = result_modid.group(1)
+                mod_version = result_version.group(1)
+            except Exception:
+                json_correct = self.json_correction(self.modinfo_content)
+                mod_name = json_correct[0]
+                mod_version = json_correct[1]
+                mod_modid = json_correct[2]
         elif type_file == '.cs':
             self.filepath = Path(self.path_mods, file)
             with open(self.filepath, "r", encoding='utf-8-sig') as fichier_cs:
@@ -755,7 +754,7 @@ except OSError | KeyError as err_lang:
 
 
 def datapath():
-    new_path_data = input(f'{lang.datapath} : ')
+    new_path_data = Prompt.ask(f'{lang.datapath} : ')
     new_path_data = Path(new_path_data)
     return new_path_data
 
@@ -797,7 +796,9 @@ if path_mods.is_dir():
 
 # Création du pdf (si argument nopause est false)
 if args.nopause == 'false':
-    make_pdf = input(f'{lang.makepdf} ({lang.yes}/{lang.no}) : ')
+    make_pdf = None
+    while make_pdf not in {str(lang.yes).lower(), str(lang.yes[0]).lower(), str(lang.no).lower(), str(lang.no[0]).lower()}:
+        make_pdf = Prompt.ask(f'{lang.makepdf}', choices=[lang.list_yesno[0], lang.list_yesno[1], lang.list_yesno[2], lang.list_yesno[3]])
     if make_pdf == str(lang.yes).lower() or make_pdf == str(lang.yes[0]).lower():
         # Construction du titre
         asterisk = '*'
@@ -825,7 +826,9 @@ if args.nopause == 'false':
         pdf = MakePdf()
         pdf.makepdf()
         input(f'{lang.exiting_script}')
-
+    elif make_pdf == str(lang.no).lower() or make_pdf == str(lang.no[0]).lower():
+        print(f'{lang.end_of_prg} ')
+        time.sleep(3)
 
 # On efface le dossier temp
 if Path('temp').is_dir():
