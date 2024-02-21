@@ -34,5 +34,6 @@
 	"makePDF" : "¿Desea crear un archivo pdf con la lista de mods?",
 	"addingmodsinprogress" : "Añadiendo mods actuales...",
 	"makingpdfended" : "Creación del archivo PDF completada.",
-	"pdfTitle" : "Lista de mods instalados"
+	"pdfTitle" : "Lista de mods instalados",
+	"ErrorCreationPDF" : "No se ha podido crear el archivo. Compruebe que no esté ya abierto."
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Gestion des mods de Vintage Story v.1.3.0-rc1:
+Gestion des mods de Vintage Story :
 - Liste les mods installés et vérifie s'il existe une version plus récente et la télécharge
 - Affiche le résumé
 - Crée un fichier updates.log
@@ -14,6 +14,7 @@ Gestion des mods de Vintage Story v.1.3.0-rc1:
 """
 __author__ = "Laerinok"
 __date__ = "2023-02-20"
+__version__ = "1.3.0-rc1"
 
 import argparse
 import configparser
@@ -45,7 +46,7 @@ from rich import print
 
 class LanguageChoice:
     def __init__(self):
-        self.num_version = '1.3.0-rc1'
+        self.num_version = __version__
         self.url_mods = 'https://mods.vintagestory.at/'
         self.path_lang = Path("lang")
         # Si on définit manuellement la langue via le fichier config
@@ -119,6 +120,7 @@ class LanguageChoice:
             self.addingmodsinprogress = desc['addingmodsinprogress']
             self.makingpdfended = desc['makingpdfended']
             self.pdfTitle = desc['pdfTitle']
+            self.ErrorCreationPDF = desc['ErrorCreationPDF']
 
 
 class MajScript(LanguageChoice):
@@ -143,7 +145,11 @@ class MajScript(LanguageChoice):
             # On compare les versions
             result = VSUpdate.compversion(self.num_version, ch_log_ver[1])
             if result == -1:
-                print(f'[red]\n\t\t{self.existing_update}[/red]{self.url_mods.rstrip("/")}{soup_link_prg["href"]}\n')
+                column, row = os.get_terminal_size()
+                maj_txt = f'[red]{self.existing_update}[/red]{self.url_mods.rstrip("/")}{soup_link_prg["href"]}'
+                lines_update = maj_txt.splitlines()
+                for line in lines_update:
+                    print(f'{line.center(column)}')
 
         except urllib.error.URLError as err_url:
             # Affiche de l'erreur si le lien n'est pas valide
@@ -396,11 +402,19 @@ class VSUpdate(LanguageChoice):
         else:
             self.version = self.gamever_max
         # *** Texte d'accueil ***
-        print(f'\n\n\t\t\t[bold cyan]{self.title} - v.{self.num_version} {self.author}[/bold cyan]')
+        column, row = os.get_terminal_size()
+        txt_title01 = f'\n\n[bold cyan]{self.title} - v.{self.num_version} {self.author}[/bold cyan]'
+        lines01 = txt_title01.splitlines()
+        for line in lines01:
+            print(line.center(column))
         # On vérifie si une version plus récente du script est en ligne
         maj_script = MajScript()
         maj_script.check_update_script()
-        print(f'\n\t\t\t\t\t\t[cyan]{self.title2} : [bold]{self.version}[/bold][/cyan]\n')
+        txt_title02 = f'\n[cyan]{self.title2} : [bold]{self.version}[/bold][/cyan]\n'
+        lines02 = txt_title02.splitlines()
+        for line in lines02:
+            print(f'{line.center(column)}')
+        print('\n')
 
     def mods_exclusion(self):
         # On crée la liste des mods à exclure de la maj
@@ -679,6 +693,8 @@ class MakePdf:
         monpdf.set_page_background((200, 215, 150))
         monpdf.add_page(same=True)
         nom_fichier_pdf = f'VS_Mods_{self.annee}_{self.mois}_{self.jour}.pdf'
+        monpdf.oversized_images = "DOWNSCALE"
+        monpdf.oversized_images_ratio = 5
         width_img = 180
         x = (210-width_img)/2
         monpdf.image('banner.png', x=x, y=5, w=width_img)
@@ -697,11 +713,11 @@ class MakePdf:
         with monpdf.table(first_row_as_headings=False,
                           line_height=5,
                           width=190,
-                          col_widths=(5, 50, 135)) as table:
+                          col_widths=(5, 55, 130)) as table:
             for ligne in table_data:
                 # cellule 1 - icone
                 row = table.row()
-                row.cell(img=ligne[3], link=ligne[2])
+                row.cell(img=ligne[3], img_fill_width=True, link=ligne[2])
                 # cellule 2 - nom du mod
                 monpdf.set_font("helvetica", size=7, style='B')
                 row.cell(ligne[0], link=ligne[2])
@@ -709,7 +725,10 @@ class MakePdf:
                 monpdf.set_font("helvetica", size=6)
                 row.cell(ligne[1])
 
-        monpdf.output(nom_fichier_pdf)
+        try:
+            monpdf.output(nom_fichier_pdf)
+        except PermissionError:
+            print(f'[red]{lang.ErrorCreationPDF}[/red]')
 
 
 # Définitions des arguments
@@ -780,10 +799,13 @@ if path_mods.is_dir():
 if args.nopause == 'false':
     make_pdf = input(f'{lang.makepdf} ({lang.yes}/{lang.no}) : ')
     if make_pdf == str(lang.yes).lower() or make_pdf == str(lang.yes[0]).lower():
-        # On appelle pdf
-        print('\t[green]*********************************************************[/green]')
+        # Construction du titre
+        asterisk = '*'
+        nb_asterisk = len(lang.makePDFTitle) + 4
+        string_asterisk = asterisk * nb_asterisk
+        print(f'\t[green]{string_asterisk}[/green]')
         print(f'\t[green]* {lang.makePDFTitle} *[/green]')
-        print('\t[green]*********************************************************[/green]')
+        print(f'\t[green]{string_asterisk}[/green]')
 
         # uniquement pour avoir le nb de mods (plus rapide car juste listing)
         nb_mods = 0
