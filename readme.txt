@@ -13,7 +13,7 @@ You can also generate a pdf file of the mod list befor programme closes.
 
 What the script does in detail :
 
-Checks if there is a new version of the program.
+	- Checks if there is a new version of the program.
 	- Detects the language of your system and automatically loads the language file (for now only english and french) if presents in lang directory. You can set it manually in the config.ini file once created.
 	- Creates a config.ini file
     - Creates a 'temp' folder at the root of the application.
