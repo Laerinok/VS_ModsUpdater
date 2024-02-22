@@ -6,13 +6,13 @@ Vintage Story mod management:
 - Displays summary
 - Creates an updates.log file
 - You can limit the game version for mod updates
-- Check for script updates on moddb
+- Check for ModsUpdater updates on moddb
 - Windows + Linux
-- script execution by command line for server.
+- script execution by command line for servers.
 - Possibility of generating a pdf file of the mod list
 """
 __author__ = "Laerinok"
-__date__ = "2023-02-21"
+__date__ = "2023-02-22"
 __version__ = "1.3.0"
 
 import argparse
@@ -232,6 +232,8 @@ class VSUpdate(LanguageChoice):
         with open(self.config_file, "w", encoding="utf-8") as cfgfile:
             # Ajout du contenu
             config = configparser.ConfigParser(allow_no_value=True)
+            mu_ver = f'# ModsUpdater v{__version__}'
+            config.set('', mu_ver)
             config.add_section('ModPath')
             config.set('ModPath', 'path', str(self.path_mods))
             config.add_section('Language')
@@ -279,20 +281,27 @@ class VSUpdate(LanguageChoice):
                     with fichier_zip.open('modinfo.json') as modinfo_json:
                         self.modinfo_content = modinfo_json.read().decode('utf-8-sig')
             try:
-                regex_name = r'"name": "(.*)",'
+                regex_name = r'"name" {0,}: {0,}"(.*)",'
                 result_name = re.search(regex_name, self.modinfo_content, flags=re.IGNORECASE)
-                regex_modid = r'"modid": "(.*)",'
+                regex_modid = r'"modid" {0,}: {0,}"(.*)",'
                 result_modid = re.search(regex_modid, self.modinfo_content, flags=re.IGNORECASE)
-                regex_version = r'"version": "(.*)",'
+                regex_version = r'"version" {0,}: {0,}"(.*)",'
                 result_version = re.search(regex_version, self.modinfo_content, flags=re.IGNORECASE)
+                regex_description = r'"description" {0,}: {0,}"(.*)",'
+                result_description = re.search(regex_description, self.modinfo_content, flags=re.IGNORECASE)
                 mod_name = result_name.group(1)
                 mod_modid = result_modid.group(1)
                 mod_version = result_version.group(1)
+                if result_description is not None:
+                    mod_description = result_description.group(1)
+                else:
+                    mod_description = ''
             except Exception:
                 json_correct = self.json_correction(self.modinfo_content)
                 mod_name = json_correct[0]
                 mod_version = json_correct[1]
                 mod_modid = json_correct[2]
+                mod_description = json_correct[3]
         elif type_file == '.cs':
             self.filepath = Path(self.path_mods, file)
             with open(self.filepath, "r", encoding='utf-8-sig') as fichier_cs:
@@ -301,10 +310,13 @@ class VSUpdate(LanguageChoice):
                 result_name = re.search(regexp_name, cs_file, flags=re.IGNORECASE)
                 regexp_version = '(Version\s=\s\")([\d.]*)\"'
                 result_version = re.search(regexp_version, cs_file, flags=re.IGNORECASE)
+                regexp_description = 'Description = "(.*)",'
+                result_description = re.search(regexp_description, cs_file, flags=re.IGNORECASE)
                 mod_name = result_name[2]
                 mod_version = result_version[2]
                 mod_modid = mod_name
-        return mod_name, mod_modid, mod_version, self.filepath
+                mod_description = result_description[1]
+        return mod_name, mod_modid, mod_version, mod_description, self.filepath
 
     def liste_complete_mods(self):
         # On crée la liste contenant les noms des fichiers zip des mods
@@ -552,8 +564,7 @@ class VSUpdate(LanguageChoice):
 
 # Création du pdf.
 class GetInfo:
-    def __init__(self, mod_filepath):
-        self.regex_json = ''
+    def __init__(self, mod_name, mod_id, mod_moddesc, mod_filepath):
         # path
         self.csvfile = Path('temp', 'csvtemp.csv')
         self.filepath = mod_filepath
@@ -567,85 +578,33 @@ class GetInfo:
         # list
         self.moddesc_lst = []
         # var
-        self.mod_moddesc = None
-        self.mod_name = None
+        self.mod_moddesc = mod_moddesc
+        self.mod_name = mod_name
         self.mod_url = None
-        self.mod_id = None
+        self.mod_id = mod_id
+        self.modinfo_content = None
 
-    def get_infos(self, des, content_file):
-        regex_name = r'name'
-        result_name = re.search(regex_name, content_file, flags=re.IGNORECASE)
-        regex_desc = r'description'
-        result_desc = re.search(regex_desc, content_file, flags=re.IGNORECASE)
-        regex_modid = r'modid'
-        result_modid = re.search(regex_modid, content_file, flags=re.IGNORECASE)
-        mod_name = des[result_name[0]].capitalize()
-        try:
-            mod_id = des[result_modid[0]]
-        except TypeError:
-            mod_id = str(mod_name).replace(' ', '').lower()
-        try:
-            mod_moddesc = des[result_desc[0]].capitalize()
-        except TypeError:
-            mod_moddesc = ''
+    def get_infos(self):
         # extraction modicon.png et renommage avec modid
-        archive = zipfile.ZipFile(self.filepath, 'r')
-        try:
-            archive.extract('modicon.png', self.path_png)
-            png_name = f'{mod_id}.png'
-            self.path_modicon = Path(self.path_png, png_name)
+        if zipfile.is_zipfile(self.filepath):
+            archive = zipfile.ZipFile(self.filepath, 'r')
             try:
-                os.rename(Path(self.path_png, 'modicon.png'), self.path_modicon)
-            except FileExistsError:
-                pass
-        except KeyError:
-            pass
-        zipfile.ZipFile.close(archive)
-        mod_url = self.get_url(mod_id)
-        self.moddesc_lst.append(mod_moddesc)
-        self.moddesc_lst.append(mod_url)
-        self.moddesc_lst.append(self.path_modicon)
-        self.modsinfo_dic[mod_name] = self.moddesc_lst
-
-    def extract_modinfo(self):
-        # On trie les fichiers .zip et .cs
-        type_file = os.path.splitext(self.filepath)[1]
-        if type_file == '.zip':
-            if zipfile.is_zipfile(self.filepath):  # Vérifie si fichier est un Zip valide
-                archive = zipfile.ZipFile(self.filepath, 'r')
-                archive.extract('modinfo.json', self.path_temp)
-                zipfile.ZipFile.close(archive)
-            json_file_path = Path(self.path_temp, "modinfo.json")
-            with open(json_file_path, "r", encoding='utf-8-sig') as fichier_json:
-                content_file = fichier_json.read()
+                archive.extract('modicon.png', self.path_png)
+                png_name = f'{self.mod_id}.png'
+                self.path_modicon = Path(self.path_png, png_name)
                 try:
-                    des = json.load(fichier_json)
-                except json.decoder.JSONDecodeError:
-                    # correction si présence  de ,], au lieu de ],
-                    new_content_file = re.sub(r',\n\s*]', r'\n]', content_file)
-                    try:
-                        des = json.loads(new_content_file)
-                    except json.decoder.JSONDecodeError:
-                        # correction si présence  de }, au lieu de } en fin de fichier
-                        new_content_file = re.sub(r',\n\s*}', r'\n}', content_file)
-                        des = json.loads(new_content_file)
-                self.get_infos(des, content_file)
+                    os.rename(Path(self.path_png, 'modicon.png'), self.path_modicon)
+                except FileExistsError:
+                    pass
+            except KeyError:
+                pass
+            zipfile.ZipFile.close(archive)
+        self.mod_url = self.get_url(self.mod_id)
+        self.moddesc_lst.append(self.mod_moddesc)
+        self.moddesc_lst.append(self.mod_url)
+        self.moddesc_lst.append(self.path_modicon)
+        self.modsinfo_dic[self.mod_name] = self.moddesc_lst
 
-        elif type_file == '.cs':
-            with open(self.filepath, "r", encoding='utf-8-sig') as fichier_cs:
-                cs_file = fichier_cs.read()
-                regexp_name = '(namespace )(\w*)'
-                result_name = re.search(regexp_name, cs_file, flags=re.IGNORECASE)
-                regexp_desc = '(description *= \")(.*)\",'
-                result_desc = re.search(regexp_desc, cs_file, flags=re.IGNORECASE)
-                self.mod_name = result_name[2]
-                self.mod_id = str(self.mod_name).replace(' ', '').lower()
-                self.mod_url = self.get_url(self.mod_id)
-                self.mod_moddesc = result_desc[2]
-                self.moddesc_lst.append(self.mod_moddesc)
-                self.moddesc_lst.append(self.mod_url)
-                self.moddesc_lst.append(self.path_modicon)
-                self.modsinfo_dic[self.mod_name] = self.moddesc_lst
         # On crée le csv
         with open(self.csvfile, "a", encoding="windows-1252", newline='') as fichier:
             objet_csv = csv.writer(fichier)
@@ -818,13 +777,12 @@ if args.nopause == 'false':
         for modfilepath in glob.glob(f'{path_mods}\*.*'):
             if os.path.splitext(modfilepath)[1] == '.zip' or os.path.splitext(modfilepath)[1] == '.cs':
                 nb_mods_ok += 1
-                modinfo = GetInfo(modfilepath)
-                resultinfo = modinfo.extract_modinfo()
+                info_content = VSUpdate(modfilepath).extract_modinfo(modfilepath)
+                GetInfo(info_content[0], info_content[1], info_content[3], info_content[4]).get_infos()
                 print(f'\t\t{lang.addingmodsinprogress} {nb_mods_ok}/{nb_mods}', end="\r")
-        print(f'\n\n\t\t[blue]{lang.makingpdfended}\n[/blue]')
-
         pdf = MakePdf()
         pdf.makepdf()
+        print(f'\n\n\t\t[blue]{lang.makingpdfended}\n[/blue]')
         input(f'{lang.exiting_script}')
     elif make_pdf == str(lang.no).lower() or make_pdf == str(lang.no[0]).lower():
         print(f'{lang.end_of_prg} ')
