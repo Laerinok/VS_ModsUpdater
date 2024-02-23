@@ -27,7 +27,7 @@
     "last_update" : "Última Actualización",
     "yes" : "Sí",
     "no" : "No",
-    "existing_update" : "¡Nueva versión de ModsUploader disponible! ",
+    "existing_update" : "¡Nueva versión de ModsUpdater disponible! ",
     "exiting_script" : "Presiona la tecla ENTER para salir...",
 	"language" : "# Para cambiar el idioma predeterminado, descomente la línea a continuación y configure el idioma deseado (carpeta 'lang').",
 	"makePDFTitle" : "Creación de un archivo PDF con la lista de mods",
