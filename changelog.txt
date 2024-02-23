@@ -1,3 +1,7 @@
+v1.3.0
+- Optional : You can now generate a pdf file of your mod list
+- Some code clean-up and optimization
+- German, Italian and Ukrainian added (DeepL)
 
 v1.2.0
 - fixed french typo

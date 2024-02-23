@@ -1,22 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Gestion des mods de Vintage Story v.1.2.0:
-- Liste les mods installés et vérifie s'il existe une version plus récente et la télécharge
-- Affiche le résumé
-- Crée un fichier updates.log
-- maj des mods pour une version limite du jeu
-- Verification de la présence d'une maj du script sur moddb
-- Localisation OK
+Vintage Story mod management:
+- Lists installed mods, checks for newer versions and downloads them
+- Displays summary
+- Creates an updates.log file
+- You can limit the game version for mod updates
+- Check for ModsUpdater updates on moddb
 - Windows + Linux
-- execution du script par ligne de commande pour serveur.
+- script execution by command line for servers.
+- Possibility of generating a pdf file of the mod list
 """
 __author__ = "Laerinok"
-__date__ = "2023-10-09"
+__date__ = "2023-02-22"
+__version__ = "1.3.0"
 
 import argparse
 import configparser
-import datetime
+import csv
+import datetime as dt
+import glob
 import json
 import locale
 import os
@@ -25,21 +28,26 @@ import platform
 import re
 import shutil
 import sys
-import urllib.request
+import time
 import urllib.error
+import urllib.request
 import zipfile
+from contextlib import redirect_stderr
+from datetime import datetime
+from pathlib import Path
+
 import requests
 import semver
 import wget
-from pathlib import Path
 from bs4 import BeautifulSoup
+from fpdf import FPDF, YPos, XPos
 from rich import print
-from contextlib import redirect_stderr
+from rich.prompt import Prompt
 
 
 class LanguageChoice:
     def __init__(self):
-        self.num_version = '1.2.0'
+        self.num_version = __version__
         self.url_mods = 'https://mods.vintagestory.at/'
         self.path_lang = Path("lang")
         # Si on définit manuellement la langue via le fichier config
@@ -108,6 +116,16 @@ class LanguageChoice:
             self.existing_update = desc['existing_update']
             self.exiting_script = desc['exiting_script']
             self.language_comment = desc['language']
+            self.makePDFTitle = desc['makePDFTitle']
+            self.makepdf = desc['makePDF']
+            self.addingmodsinprogress = desc['addingmodsinprogress']
+            self.makingpdfended = desc['makingpdfended']
+            self.pdfTitle = desc['pdfTitle']
+            self.ErrorCreationPDF = desc['ErrorCreationPDF']
+            self.end_of_prg = desc['end_of_prg']
+
+        # On crée une liste pour les réponses O/N
+        self.list_yesno = [self.yes.lower(), self.no.lower(), self.yes[0].lower(), self.no[0].lower()]
 
 
 class MajScript(LanguageChoice):
@@ -132,13 +150,17 @@ class MajScript(LanguageChoice):
             # On compare les versions
             result = VSUpdate.compversion(self.num_version, ch_log_ver[1])
             if result == -1:
-                print(f'[red]\n\t\t{self.existing_update}[/red]{self.url_mods.rstrip("/")}{soup_link_prg["href"]}\n')
+                column, row = os.get_terminal_size()
+                maj_txt = f'[red]{self.existing_update}[/red]{self.url_mods.rstrip("/")}{soup_link_prg["href"]}'
+                lines_update = maj_txt.splitlines()
+                for line in lines_update:
+                    print(f'{line.center(column)}')
 
         except urllib.error.URLError as err_url:
             # Affiche de l'erreur si le lien n'est pas valide
             print(err_url.reason)
             with open('errors.log', 'a') as stderr_url, redirect_stderr(stderr_url):
-                print(datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S") + ' : ' + str(err_lang), file=sys.stderr)
+                print(dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S") + ' : ' + str(err_lang), file=sys.stderr)
 
 
 class VSUpdate(LanguageChoice):
@@ -155,16 +177,16 @@ class VSUpdate(LanguageChoice):
         # Creation des dossiers et fichiers
         if not self.path_temp.is_dir():
             os.mkdir('temp')
-        # Ancien emplacement du chargement du fichier langue
-        # LanguageChoice()
         # On crée le fichier config.ini si inexistant, puis (si lancement du script via l'executable et non en ligne de commande) on sort du programme si on veut ajouter des mods à exclure
         if not self.config_file.is_file():
             self.set_config_ini()
             if not args.modspath:
                 print(f'\t\t[bold cyan]{self.first_launch}[/bold cyan]')
                 print(f'\t\t[bold cyan]{self.first_launch2}[/bold cyan]')
-                maj_ok = input(f'\t\t{self.first_launch3} ({self.yes}/{self.no}) : ')
-                if maj_ok == str(self.no).lower() or maj_ok == str(self.no[0]).lower():
+                maj_ok = Prompt.ask(f'\n\t\t{self.first_launch3}', choices=[self.list_yesno[0], self.list_yesno[1], self.list_yesno[2], self.list_yesno[3]])
+                if maj_ok == self.list_yesno[1] or maj_ok == self.list_yesno[3]:
+                    print(f'{lang.end_of_prg} ')
+                    time.sleep(2)
                     sys.exit()
 
         # On charge le fichier config.ini
@@ -185,6 +207,7 @@ class VSUpdate(LanguageChoice):
         self.modename = None
         self.nb_maj = 0
         self.gamever_max = self.config_read.get('Game_Version_max', 'version')  # On récupère la version max du jeu pour la maj
+        self.modinfo_content = None
         # variables json_correction
         self.name_json = ''
         self.version_json = ''
@@ -209,6 +232,8 @@ class VSUpdate(LanguageChoice):
         with open(self.config_file, "w", encoding="utf-8") as cfgfile:
             # Ajout du contenu
             config = configparser.ConfigParser(allow_no_value=True)
+            mu_ver = f'# ModsUpdater v{__version__}'
+            config.set('', mu_ver)
             config.add_section('ModPath')
             config.set('ModPath', 'path', str(self.path_mods))
             config.add_section('Language')
@@ -249,36 +274,34 @@ class VSUpdate(LanguageChoice):
         # On trie les fichiers .zip et .cs
         type_file = Path(file).suffix
         if type_file == '.zip':
-            # On extrait le fichier modinfo.json de l'archive et on recupere le modid, name et version
+            # On lit le fichier modinfo.json de l'archive et on recupere le modid, name et version
             self.filepath = Path(self.path_mods, file)
             if zipfile.is_zipfile(self.filepath):  # Vérifie si fichier est un Zip valide
-                archive = zipfile.ZipFile(self.filepath, 'r')
-                try:
-                    archive.extract('modinfo.json', self.path_temp)
-                except KeyError:
-                    # On crée une liste contenant les fichiers zip qui ne sont pas des mods.
-                    self.non_mods_zipfile.append(file)
-                zipfile.ZipFile.close(archive)
-            json_file_path = Path(self.path_temp, "modinfo.json")
-            with open(json_file_path, "r", encoding='utf-8-sig') as fichier_json:  # place le contenu du fichier dans une variable pour le tester ensuite avec regex
-                content_file = fichier_json.read()
-            with open(json_file_path, "r", encoding='utf-8-sig') as fichier_json:
-                try:
-                    des = json.load(fichier_json)
-                    regex_name = r'name'
-                    result_name = re.search(regex_name, content_file, flags=re.IGNORECASE)
-                    regex_modid = r'modid'
-                    result_modid = re.search(regex_modid, content_file, flags=re.IGNORECASE)
-                    regex_version = r'version'
-                    result_version = re.search(regex_version, content_file, flags=re.IGNORECASE)
-                    mod_name = des[result_name.group()]
-                    mod_modid = des[result_modid.group()]
-                    mod_version = des[result_version.group()]
-                except Exception:
-                    json_correct = self.json_correction(content_file)
-                    mod_name = json_correct[0]
-                    mod_version = json_correct[1]
-                    mod_modid = json_correct[2]
+                with zipfile.ZipFile(self.filepath) as fichier_zip:
+                    with fichier_zip.open('modinfo.json') as modinfo_json:
+                        self.modinfo_content = modinfo_json.read().decode('utf-8-sig')
+            try:
+                regex_name = r'"name" {0,}: {0,}"(.*)",'
+                result_name = re.search(regex_name, self.modinfo_content, flags=re.IGNORECASE)
+                regex_modid = r'"modid" {0,}: {0,}"(.*)",'
+                result_modid = re.search(regex_modid, self.modinfo_content, flags=re.IGNORECASE)
+                regex_version = r'"version" {0,}: {0,}"(.*)",'
+                result_version = re.search(regex_version, self.modinfo_content, flags=re.IGNORECASE)
+                regex_description = r'"description" {0,}: {0,}"(.*)",'
+                result_description = re.search(regex_description, self.modinfo_content, flags=re.IGNORECASE)
+                mod_name = result_name.group(1)
+                mod_modid = result_modid.group(1)
+                mod_version = result_version.group(1)
+                if result_description is not None:
+                    mod_description = result_description.group(1)
+                else:
+                    mod_description = ''
+            except Exception:
+                json_correct = self.json_correction(self.modinfo_content)
+                mod_name = json_correct[0]
+                mod_version = json_correct[1]
+                mod_modid = json_correct[2]
+                mod_description = json_correct[3]
         elif type_file == '.cs':
             self.filepath = Path(self.path_mods, file)
             with open(self.filepath, "r", encoding='utf-8-sig') as fichier_cs:
@@ -287,10 +310,13 @@ class VSUpdate(LanguageChoice):
                 result_name = re.search(regexp_name, cs_file, flags=re.IGNORECASE)
                 regexp_version = '(Version\s=\s\")([\d.]*)\"'
                 result_version = re.search(regexp_version, cs_file, flags=re.IGNORECASE)
+                regexp_description = 'Description = "(.*)",'
+                result_description = re.search(regexp_description, cs_file, flags=re.IGNORECASE)
                 mod_name = result_name[2]
                 mod_version = result_version[2]
                 mod_modid = mod_name
-        return mod_name, mod_modid, mod_version, self.filepath
+                mod_description = result_description[1]
+        return mod_name, mod_modid, mod_version, mod_description, self.filepath
 
     def liste_complete_mods(self):
         # On crée la liste contenant les noms des fichiers zip des mods
@@ -378,7 +404,7 @@ class VSUpdate(LanguageChoice):
             # Affiche de l'erreur si le lien n'est pas valide
             print(err_url.reason)
             with open('errors.log', 'a') as stderr_link, redirect_stderr(stderr_link):
-                print(datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S") + ' : ' + str(err_lang), file=sys.stderr)
+                print(dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S") + ' : ' + str(err_lang), file=sys.stderr)
         return log
 
     def accueil(self, _net_version):  # le _ en debut permet de lever le message "Parameter 'net_version' value is not used
@@ -387,11 +413,19 @@ class VSUpdate(LanguageChoice):
         else:
             self.version = self.gamever_max
         # *** Texte d'accueil ***
-        print(f'\n\n\t\t\t[bold cyan]{self.title} - v.{self.num_version} {self.author}[/bold cyan]')
+        column, row = os.get_terminal_size()
+        txt_title01 = f'\n\n[bold cyan]{self.title} - v.{self.num_version} {self.author}[/bold cyan]'
+        lines01 = txt_title01.splitlines()
+        for line in lines01:
+            print(line.center(column))
         # On vérifie si une version plus récente du script est en ligne
         maj_script = MajScript()
         maj_script.check_update_script()
-        print(f'\n\t\t\t\t\t\t[cyan]{self.title2}[bold] {self.version}[/bold][/cyan]\n')
+        txt_title02 = f'\n[cyan]{self.title2} : [bold]{self.version}[/bold][/cyan]\n'
+        lines02 = txt_title02.splitlines()
+        for line in lines02:
+            print(f'{line.center(column)}')
+        print('\n')
 
     def mods_exclusion(self):
         # On crée la liste des mods à exclure de la maj
@@ -406,7 +440,7 @@ class VSUpdate(LanguageChoice):
             except configparser.InterpolationSyntaxError as err_parsing:
                 print(f'Error in config.ini [Mod_Exclusion] mod{str(j)} : {err_parsing}')
                 with open('errors.log', 'a') as stderr_parsing, redirect_stderr(stderr_parsing):
-                    print(datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S") + ' : ' + 'Error in config.ini [Mod_Exclusion] - mod' + str(j) + ' : ' + str(err_parsing), file=sys.stderr)
+                    print(dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S") + ' : ' + 'Error in config.ini [Mod_Exclusion] - mod' + str(j) + ' : ' + str(err_parsing), file=sys.stderr)
                 sys.exit()
 
     def mods_list(self):
@@ -442,7 +476,7 @@ class VSUpdate(LanguageChoice):
                 mod_file_onlinepath = (resp_dict['mod']['releases'][0]['mainfile'])
                 # compare les versions des mods
                 result_compversion = self.compversion(version_value, mod_last_version)
-                print(f' [green]{modname_value[0].upper()}{modname_value[1:]}[/green]: {self.compver1}{version_value} - {self.compver2}{mod_last_version}')
+                print(f' [green]{modname_value[0].upper()}{modname_value[1:]}[/green]: {self.compver1} : {version_value} - {self.compver2} : {mod_last_version}')
                 # On récupère les version du jeu nécessaire pour le mod
                 mod_game_versions = resp_dict['mod']['releases'][0]['tags']
                 mod_game_version_max = self.get_max_version(mod_game_versions)
@@ -455,7 +489,7 @@ class VSUpdate(LanguageChoice):
                         resp = requests.get(str(dl_link), stream=True)
                         file_size = int(resp.headers.get("Content-length"))
                         file_size_mo = round(file_size / (1024 ** 2), 2)
-                        print(f'\t{self.compver3}{file_size_mo} {self.compver3a}')
+                        print(f'\t{self.compver3} : {file_size_mo} {self.compver3a}')
                         print(f'\t[green] {modname_value} v.{mod_last_version}[/green] {self.compver4}')
                         os.remove(filename_value)
                         wget.download(dl_link, str(self.path_mods))
@@ -468,7 +502,7 @@ class VSUpdate(LanguageChoice):
                 # Affiche de l'erreur si le lien n'est pas valide
                 print(er.reason)
                 with open('errors.log', 'a') as stderr_link, redirect_stderr(stderr_link):
-                    print(datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S") + ' : ' + str(err_lang), file=sys.stderr)
+                    print(dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S") + ' : ' + str(err_lang), file=sys.stderr)
             except KeyError:
                 print(f'[green] {modname_value}[/green]: [red]{self.error} !!! {self.error_modid}[/red]')
 
@@ -476,13 +510,13 @@ class VSUpdate(LanguageChoice):
         # Résumé de la maj
         if self.nb_maj > 1:
             print(f'  [yellow]{self.summary1}[/yellow] \n')
-            print(f'{self.summary2}')
-            log_filename = f'updates_{datetime.datetime.today().strftime("%Y%m%d_%H%M%S")}.txt'
+            print(f'{self.summary2} :')
+            log_filename = f'updates_{dt.datetime.today().strftime("%Y%m%d_%H%M%S")}.txt'
             if not self.path_logs.is_dir():
                 os.mkdir('logs')
             log_path = Path(self.path_logs, log_filename)
             with open(log_path, 'w', encoding='utf-8-sig') as logfile:
-                logfile.write(f'\n\t\t\tMods Vintage Story {netversion} - {self.last_update} : {datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S")}\n\n')
+                logfile.write(f'\n\t\t\tMods Vintage Story {netversion} - {self.last_update} : {dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S")}\n\n')
                 for key, value in self.mods_updated.items():
                     # print(f' - [green]{key} {value["url"]} :[/green]')  # affiche en plus l'url du mod
                     print(f' - [green]{key} :[/green]')
@@ -497,13 +531,13 @@ class VSUpdate(LanguageChoice):
 
         elif self.nb_maj == 1:
             print(f'  [yellow]{self.summary3}[/yellow] \n')
-            print(f'{self.summary4}')
-            log_filename = f'updates_{datetime.datetime.today().strftime("%Y%m%d_%H%M%S")}.txt'
+            print(f'{self.summary4} :')
+            log_filename = f'updates_{dt.datetime.today().strftime("%Y%m%d_%H%M%S")}.txt'
             if not self.path_logs.is_dir():
                 os.mkdir('logs')
             log_path = Path(self.path_logs, log_filename)
             with open(log_path, 'w', encoding='utf-8-sig') as logfile:
-                logfile.write(f'\n\t\t\tMods Vintage Story {netversion} - {self.last_update} : {datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S")}\n\n')
+                logfile.write(f'\n\t\t\tMods Vintage Story {netversion} - {self.last_update} : {dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S")}\n\n')
                 for key, value in self.mods_updated.items():
                     print(f' - [green]{key} :[/green]')
                     logfile.write(f'\n {key} ({value["url"]}) :\n')  # affiche en plus l'url du mod
@@ -519,13 +553,140 @@ class VSUpdate(LanguageChoice):
 
         if len(self.mods_exclu) == 1:
             modinfo_values = self.extract_modinfo(self.mods_exclu[0])
-            print(f'\n {self.summary6}\n - [red]{modinfo_values[0]} [italic](v.{modinfo_values[2]})[italic][/red]')
+            print(f'\n {self.summary6} :\n - [red]{modinfo_values[0]} [italic](v.{modinfo_values[2]})[italic][/red]')
         if len(self.mods_exclu) > 1:
-            print(f'\n {self.summary7}')
+            print(f'\n {self.summary7} :')
             for k in range(0, len(self.mods_exclu)):
                 # On appelle la fonction pour extraire modinfo.json
                 modinfo_values = self.extract_modinfo(self.mods_exclu[k])
                 print(f' - [red]{modinfo_values[0]} v.{modinfo_values[2]}[/red]')
+
+
+# Création du pdf.
+class GetInfo:
+    def __init__(self, mod_name, mod_id, mod_moddesc, mod_filepath):
+        # path
+        self.csvfile = Path('temp', 'csvtemp.csv')
+        self.filepath = mod_filepath
+        self.path_temp = 'temp'
+        self.path_png = Path('temp', 'png')
+        self.path_modicon = None
+        self.path_url = 'https://mods.vintagestory.at/'
+        self.api_url = 'https://mods.vintagestory.at/api/mod/'
+        # dico
+        self.modsinfo_dic = {}
+        # list
+        self.moddesc_lst = []
+        # var
+        self.mod_moddesc = mod_moddesc
+        self.mod_name = mod_name
+        self.mod_url = None
+        self.mod_id = mod_id
+        self.modinfo_content = None
+
+    def get_infos(self):
+        # extraction modicon.png et renommage avec modid
+        if zipfile.is_zipfile(self.filepath):
+            archive = zipfile.ZipFile(self.filepath, 'r')
+            try:
+                archive.extract('modicon.png', self.path_png)
+                png_name = f'{self.mod_id}.png'
+                self.path_modicon = Path(self.path_png, png_name)
+                try:
+                    os.rename(Path(self.path_png, 'modicon.png'), self.path_modicon)
+                except FileExistsError:
+                    pass
+            except KeyError:
+                pass
+            zipfile.ZipFile.close(archive)
+        self.mod_url = self.get_url(self.mod_id)
+        self.moddesc_lst.append(self.mod_moddesc)
+        self.moddesc_lst.append(self.mod_url)
+        self.moddesc_lst.append(self.path_modicon)
+        self.modsinfo_dic[self.mod_name] = self.moddesc_lst
+
+        # On crée le csv
+        with open(self.csvfile, "a", encoding="windows-1252", newline='') as fichier:
+            objet_csv = csv.writer(fichier)
+            for items in self.modsinfo_dic:
+                objet_csv.writerow([items, self.modsinfo_dic[items][0], self.modsinfo_dic[items][1], self.modsinfo_dic[items][2]])
+        return self.modsinfo_dic
+
+    def get_url(self, modid):
+        url = os.path.join(self.api_url, modid)
+        req = urllib.request.Request(url)
+        try:
+            urllib.request.urlopen(req)  # On teste l'existence du lien
+            req_page = requests.get(url)
+            resp_dict = req_page.json()
+            mod_asset_id = str(resp_dict['mod']['assetid'])
+            mod_urlalias = str(resp_dict['mod']['urlalias'])
+            if mod_urlalias:
+                url_mod = f'https://mods.vintagestory.at/{mod_urlalias}'
+            else:
+                url_mod = f'https://mods.vintagestory.at/show/mod/{mod_asset_id}'
+            return url_mod
+        except urllib.error.URLError:
+            pass
+
+
+class MakePdf:
+    def __init__(self):
+        self.langchoice = LanguageChoice()
+        # var temps
+        self.current_dateTime = datetime.now()
+        self.date_dl = self.current_dateTime.strftime("%Y-%m-%d %H:%M")
+        self.annee = self.current_dateTime.strftime("%Y")
+        self.mois = self.current_dateTime.strftime("%m")
+        self.jour = self.current_dateTime.strftime("%d")
+        # path
+        self.csvfile = Path('temp', 'csvtemp.csv')
+
+    def makepdf(self):
+        # On crée le pdf
+        monpdf = FPDF('P', 'mm', 'A4')
+        margintop_page = 10
+        monpdf.set_top_margin(margintop_page)
+        monpdf.set_auto_page_break(True, margin=10)
+        monpdf.set_page_background((200, 215, 150))
+        monpdf.add_page(same=True)
+        nom_fichier_pdf = f'VS_Mods_{self.annee}_{self.mois}_{self.jour}.pdf'
+        monpdf.oversized_images = "DOWNSCALE"
+        monpdf.oversized_images_ratio = 5
+        width_img = 180
+        x = (210-width_img)/2
+        monpdf.image('banner.png', x=x, y=5, w=width_img)
+        # Titre
+        monpdf.set_font("helvetica", size=20, style='B')
+        monpdf.set_text_color(6, 6, 65)  # Couleur RGB pour le titre
+        monpdf.set_y(45)
+        monpdf.cell(w=0, h=20, text=f'{self.langchoice.pdfTitle}', border=0, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C", fill=False)
+        table_data = []
+        # On remplit la liste table_data
+        with open(self.csvfile, newline='') as csv_file:
+            reader = csv.reader(csv_file, delimiter=',')
+            for ligne in reader:
+                table_data.append(ligne)
+
+        with monpdf.table(first_row_as_headings=False,
+                          line_height=5,
+                          width=190,
+                          col_widths=(5, 55, 130)) as table:
+            for ligne in table_data:
+                # cellule 1 - icone
+                row = table.row()
+                row.cell(img=ligne[3], img_fill_width=True, link=ligne[2])
+                # cellule 2 - nom du mod
+                monpdf.set_font("helvetica", size=7, style='B')
+                row.cell(ligne[0], link=ligne[2])
+                # cellule 3 - description
+                monpdf.set_font("helvetica", size=6)
+                row.cell(ligne[1])
+
+        try:
+            monpdf.output(nom_fichier_pdf)
+        except PermissionError:
+            print(f'[red]{lang.ErrorCreationPDF}[/red]')
 
 
 # Définitions des arguments
@@ -547,12 +708,12 @@ try:
 except OSError | KeyError as err_lang:
     print(err_lang, file=sys.stderr)
     with open('errors.log', 'a') as stderr, redirect_stderr(stderr):
-        print(datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S") + ' : ' + str(err_lang), file=sys.stderr)
+        print(dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S") + ' : ' + str(err_lang), file=sys.stderr)
     sys.exit()
 
 
 def datapath():
-    new_path_data = input(f'{lang.datapath}')
+    new_path_data = Prompt.ask(f'{lang.datapath} : ')
     new_path_data = Path(new_path_data)
     return new_path_data
 
@@ -570,9 +731,9 @@ else:
     else:
         path_mods = None
 
-
 # Charge le chemin du dossier data de VS à partir du config.ini si il exsite
 config_path = Path(Path.cwd(), 'config.ini')
+config_make_pdf = None
 if not Path(config_path).is_file():
     if not args.modspath:
         while not path_mods.is_dir():
@@ -592,9 +753,41 @@ if path_mods.is_dir():
     inst.update_mods()
     inst.resume('inst')
 
+# Création du pdf (si argument nopause est false)
+if args.nopause == 'false':
+    make_pdf = None
+    while make_pdf not in {str(lang.yes).lower(), str(lang.yes[0]).lower(), str(lang.no).lower(), str(lang.no[0]).lower()}:
+        make_pdf = Prompt.ask(f'{lang.makepdf}', choices=[lang.list_yesno[0], lang.list_yesno[1], lang.list_yesno[2], lang.list_yesno[3]])
+    if make_pdf == str(lang.yes).lower() or make_pdf == str(lang.yes[0]).lower():
+        # Construction du titre
+        asterisk = '*'
+        nb_asterisk = len(lang.makePDFTitle) + 4
+        string_asterisk = asterisk * nb_asterisk
+        print(f'\t[green]{string_asterisk}[/green]')
+        print(f'\t[green]* {lang.makePDFTitle} *[/green]')
+        print(f'\t[green]{string_asterisk}[/green]')
+
+        # uniquement pour avoir le nb de mods (plus rapide car juste listing)
+        nb_mods = 0
+        nb_mods_ok = 0
+        print('\n')
+        for mod in glob.glob(f'{path_mods}\*.*'):
+            if os.path.splitext(mod)[1] == '.zip' or os.path.splitext(mod)[1] == '.cs':
+                nb_mods += 1
+        for modfilepath in glob.glob(f'{path_mods}\*.*'):
+            if os.path.splitext(modfilepath)[1] == '.zip' or os.path.splitext(modfilepath)[1] == '.cs':
+                nb_mods_ok += 1
+                info_content = VSUpdate(modfilepath).extract_modinfo(modfilepath)
+                GetInfo(info_content[0], info_content[1], info_content[3], info_content[4]).get_infos()
+                print(f'\t\t{lang.addingmodsinprogress} {nb_mods_ok}/{nb_mods}', end="\r")
+        pdf = MakePdf()
+        pdf.makepdf()
+        print(f'\n\n\t\t[blue]{lang.makingpdfended}\n[/blue]')
+        input(f'{lang.exiting_script}')
+    elif make_pdf == str(lang.no).lower() or make_pdf == str(lang.no[0]).lower():
+        print(f'{lang.end_of_prg} ')
+        time.sleep(3)
+
 # On efface le dossier temp
 if Path('temp').is_dir():
     shutil.rmtree('temp')
-# Fin du script. Désactive la pause si script lancé en ligne de commande.
-if args.nopause == 'false':
-    input(lang.exiting_script)
