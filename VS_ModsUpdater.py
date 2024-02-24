@@ -13,7 +13,7 @@ Vintage Story mod management:
 """
 __author__ = "Laerinok"
 __date__ = "2023-02-22"
-__version__ = "1.3.1"
+__version__ = "1.3.2"
 
 import argparse
 import configparser
@@ -212,12 +212,15 @@ class VSUpdate(LanguageChoice):
         self.name_json = ''
         self.version_json = ''
         self.modid_json = ''
+        self.moddesc_json = ''
         self.regex_name_json = ''
         self.result_name_json = ''
         self.regex_version_json = ''
         self.result_version_json = ''
         self.regex_modid_json = ''
         self.result_modid_json = ''
+        self.regex_moddesc_json = ''
+        self.result_moddesc_json = ''
         # variables extract_modinfo
         self.filepath = ''
         # Accueil
@@ -256,19 +259,23 @@ class VSUpdate(LanguageChoice):
             config.write(cfgfile)
 
     def json_correction(self, txt_json):
-        self.regex_name_json = r'(\"name\": \")([\w*\s*]*)'
+        self.regex_name_json = r'"name" {0,}: {0,}"(.*)",{0,}'
         self.result_name_json = re.search(self.regex_name_json, txt_json, flags=re.IGNORECASE)
-        self.regex_version_json = r'(\"version\": \")([\d*.]*)'
+        self.regex_version_json = r'"version" {0,}: {0,}"(.*)",{0,}'
         self.result_version_json = re.search(self.regex_version_json, txt_json, flags=re.IGNORECASE)
-        self.regex_modid_json = r'(\"modid\": \")([\w*\s*]*)'
+        self.regex_modid_json = r'"modid" {0,}: {0,}"(.*)",{0,}'
         self.result_modid_json = re.search(self.regex_modid_json, txt_json, flags=re.IGNORECASE)
+        self.regex_moddesc_json = r'"description" {0,}: {0,}"(.*)",{0,}'
+        self.result_moddesc_json = re.search(self.regex_moddesc_json, txt_json, flags=re.IGNORECASE)
         if self.result_name_json:
             self.name_json = self.result_name_json.group(2)
         if self.result_version_json:
             self.version_json = self.result_version_json.group(2)
         if self.result_modid_json:
             self.modid_json = self.result_modid_json.group(2)
-        return self.name_json, self.version_json, self.modid_json
+        if self.result_moddesc_json:
+            self.moddesc_json = self.result_moddesc_json.group(2)
+        return self.name_json, self.version_json, self.modid_json, self.moddesc_json
 
     def extract_modinfo(self, file):
         # On trie les fichiers .zip et .cs
@@ -281,13 +288,13 @@ class VSUpdate(LanguageChoice):
                     with fichier_zip.open('modinfo.json') as modinfo_json:
                         self.modinfo_content = modinfo_json.read().decode('utf-8-sig')
             try:
-                regex_name = r'"name" {0,}: {0,}"(.*)",'
+                regex_name = r'"name" {0,}: {0,}"(.*)",{0,}'
                 result_name = re.search(regex_name, self.modinfo_content, flags=re.IGNORECASE)
-                regex_modid = r'"modid" {0,}: {0,}"(.*)",'
+                regex_modid = r'"modid" {0,}: {0,}"(.*)",{0,}'
                 result_modid = re.search(regex_modid, self.modinfo_content, flags=re.IGNORECASE)
-                regex_version = r'"version" {0,}: {0,}"(.*)",'
+                regex_version = r'"version" {0,}: {0,}"(.*)",{0,}'
                 result_version = re.search(regex_version, self.modinfo_content, flags=re.IGNORECASE)
-                regex_description = r'"description" {0,}: {0,}"(.*)",'
+                regex_description = r'"description" {0,}: {0,}"(.*)",{0,}'
                 result_description = re.search(regex_description, self.modinfo_content, flags=re.IGNORECASE)
                 mod_name = result_name.group(1)
                 mod_modid = result_modid.group(1)
