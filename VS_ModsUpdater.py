@@ -13,7 +13,7 @@ Vintage Story mod management:
 """
 __author__ = "Laerinok"
 __date__ = "2023-02-22"
-__version__ = "1.3.0"
+__version__ = "1.3.1"
 
 import argparse
 import configparser
@@ -301,7 +301,10 @@ class VSUpdate(LanguageChoice):
                 mod_name = json_correct[0]
                 mod_version = json_correct[1]
                 mod_modid = json_correct[2]
-                mod_description = json_correct[3]
+                if json_correct[3] is not None:
+                    mod_description = json_correct[3]
+                else:
+                    mod_description = ''
         elif type_file == '.cs':
             self.filepath = Path(self.path_mods, file)
             with open(self.filepath, "r", encoding='utf-8-sig') as fichier_cs:
@@ -451,7 +454,7 @@ class VSUpdate(LanguageChoice):
             if modexclu in self.liste_mod_maj_filename:
                 self.liste_mod_maj_filename.remove(modexclu)  # contient la liste des mods à mettre a jour avec les noms de fichier
         for elem in self.liste_mod_maj_filename:
-            name = self.extract_modinfo(elem)
+            name = self.extract_modinfo(elem)[0]
             self.mod_name_list.append(name[0])
 
     def update_mods(self):
@@ -463,7 +466,7 @@ class VSUpdate(LanguageChoice):
             modid_value = self.extract_modinfo(mod_maj)[1]
             if modid_value == '':
                 modid_value = re.sub(r'\s', '', modname_value).lower()
-            filename_value = self.extract_modinfo(mod_maj)[3]
+            filename_value = self.extract_modinfo(mod_maj)[4]
             mod_url_api = f'{self.url_api}{modid_value}'
             # On teste la validité du lien url
             req = urllib.request.Request(str(mod_url_api))
