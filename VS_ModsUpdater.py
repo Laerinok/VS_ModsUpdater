@@ -12,8 +12,8 @@ Vintage Story mod management:
 - Possibility of generating a pdf file of the mod list
 """
 __author__ = "Laerinok"
-__date__ = "2023-02-22"
-__version__ = "1.3.2"
+__date__ = "2023-02-28"
+__version__ = "1.3.3"
 
 import argparse
 import configparser
@@ -29,6 +29,7 @@ import re
 import shutil
 import sys
 import time
+import traceback
 import urllib.error
 import urllib.request
 import zipfile
@@ -43,6 +44,15 @@ from bs4 import BeautifulSoup
 from fpdf import FPDF, YPos, XPos
 from rich import print
 from rich.prompt import Prompt
+
+
+# Creation of a logfile
+def write_log(info_crash):
+    if not Path('logs').is_dir():
+        os.mkdir('logs')
+    log_path = Path('logs').joinpath(f'crash-log-{dt.datetime.today().strftime("%Y%m%d%H%M%S")}.txt')
+    with open(log_path, 'a', encoding='UTF-8') as crashlog_file:
+        crashlog_file.write(f'{dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S")} : {info_crash}\n')
 
 
 class LanguageChoice:
@@ -158,9 +168,8 @@ class MajScript(LanguageChoice):
 
         except urllib.error.URLError as err_url:
             # Affiche de l'erreur si le lien n'est pas valide
-            print(err_url.reason)
-            with open('errors.log', 'a') as stderr_url, redirect_stderr(stderr_url):
-                print(dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S") + ' : ' + str(err_lang), file=sys.stderr)
+            msg_error = f'{err_url.reason} : {url_script}'
+            write_log(msg_error)
 
 
 class VSUpdate(LanguageChoice):
@@ -174,6 +183,7 @@ class VSUpdate(LanguageChoice):
         self.path_logs = Path("logs")
         self.path_mods = Path(pathmods)
         self.url_api = 'https://mods.vintagestory.at/api/mod/'
+        self.crashlog_path = Path('logs').joinpath('crash-log.txt')
         # Creation des dossiers et fichiers
         if not self.path_temp.is_dir():
             os.mkdir('temp')
@@ -181,11 +191,13 @@ class VSUpdate(LanguageChoice):
         if not self.config_file.is_file():
             self.set_config_ini()
             if not args.modspath:
-                print(f'\t\t[bold cyan]{self.first_launch}[/bold cyan]')
-                print(f'\t\t[bold cyan]{self.first_launch2}[/bold cyan]')
-                maj_ok = Prompt.ask(f'\n\t\t{self.first_launch3}', choices=[self.list_yesno[0], self.list_yesno[1], self.list_yesno[2], self.list_yesno[3]])
+                print(f'\t[bold cyan]{self.first_launch}[/bold cyan]')
+                print(f'\t[bold cyan]{self.first_launch2}[/bold cyan]')
+                maj_ok = Prompt.ask(f'\n\t{self.first_launch3}', choices=[self.list_yesno[0], self.list_yesno[1], self.list_yesno[2], self.list_yesno[3]])
                 if maj_ok == self.list_yesno[1] or maj_ok == self.list_yesno[3]:
                     print(f'{lang.end_of_prg} ')
+                    if Path('temp').is_dir():
+                        shutil.rmtree('temp')
                     time.sleep(2)
                     sys.exit()
 
@@ -297,21 +309,30 @@ class VSUpdate(LanguageChoice):
                 regex_description = r'"description" {0,}: {0,}"(.*)",{0,}'
                 result_description = re.search(regex_description, self.modinfo_content, flags=re.IGNORECASE)
                 mod_name = result_name.group(1)
-                mod_modid = result_modid.group(1)
+                if result_modid is not None:
+                    mod_modid = result_modid.group(1)
+                else:
+                    mod_modid = mod_name.replace(" ", "").lower()
                 mod_version = result_version.group(1)
                 if result_description is not None:
                     mod_description = result_description.group(1)
                 else:
                     mod_description = ''
             except Exception:
-                json_correct = self.json_correction(self.modinfo_content)
-                mod_name = json_correct[0]
-                mod_version = json_correct[1]
-                mod_modid = json_correct[2]
-                if json_correct[3] is not None:
-                    mod_description = json_correct[3]
-                else:
-                    mod_description = ''
+                try:
+                    json_correct = self.json_correction(self.modinfo_content)
+                    mod_name = json_correct[0]
+                    mod_version = json_correct[1]
+                    mod_modid = json_correct[2]
+                    if json_correct[3] is not None:
+                        mod_description = json_correct[3]
+                    else:
+                        mod_description = ''
+                except Exception:
+                    msg_error = f'{file} :\n\n\t {traceback.format_exc()}'
+                    write_log(msg_error)
+                msg_error = f'{file} :\n\n\t {traceback.format_exc()}'
+                write_log(msg_error)
         elif type_file == '.cs':
             self.filepath = Path(self.path_mods, file)
             with open(self.filepath, "r", encoding='utf-8-sig') as fichier_cs:
@@ -370,8 +391,12 @@ class VSUpdate(LanguageChoice):
 
     @staticmethod
     def compversion(v1, v2):
-        ver = VSUpdate.verif_formatversion(v1, v2)
-        compver = semver.compare(ver[0], ver[1])
+        compver = ''
+        try:
+            ver = VSUpdate.verif_formatversion(v1, v2)
+            compver = semver.compare(ver[0], ver[1])
+        except Exception:
+            write_log(traceback.format_exc())
         return compver
 
     @staticmethod
@@ -412,9 +437,8 @@ class VSUpdate(LanguageChoice):
             log['url'] = url
         except urllib.error.URLError as err_url:
             # Affiche de l'erreur si le lien n'est pas valide
-            print(err_url.reason)
-            with open('errors.log', 'a') as stderr_link, redirect_stderr(stderr_link):
-                print(dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S") + ' : ' + str(err_lang), file=sys.stderr)
+            msg_error = f'{err_url.reason} : {url}'
+            write_log(msg_error)
         return log
 
     def accueil(self, _net_version):  # le _ en debut permet de lever le message "Parameter 'net_version' value is not used
@@ -449,7 +473,7 @@ class VSUpdate(LanguageChoice):
                 pass
             except configparser.InterpolationSyntaxError as err_parsing:
                 print(f'Error in config.ini [Mod_Exclusion] mod{str(j)} : {err_parsing}')
-                with open('errors.log', 'a') as stderr_parsing, redirect_stderr(stderr_parsing):
+                with open('errors.txt', 'a') as stderr_parsing, redirect_stderr(stderr_parsing):
                     print(dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S") + ' : ' + 'Error in config.ini [Mod_Exclusion] - mod' + str(j) + ' : ' + str(err_parsing), file=sys.stderr)
                 sys.exit()
 
@@ -501,18 +525,22 @@ class VSUpdate(LanguageChoice):
                         file_size_mo = round(file_size / (1024 ** 2), 2)
                         print(f'\t{self.compver3} : {file_size_mo} {self.compver3a}')
                         print(f'\t[green] {modname_value} v.{mod_last_version}[/green] {self.compver4}')
-                        os.remove(filename_value)
+                        try:
+                            os.remove(filename_value)
+                        except PermissionError:
+                            msg_error = f'{filename_value} :\n\n\t {traceback.format_exc()}'
+                            write_log(msg_error)
+                            sys.exit()
                         wget.download(dl_link, str(self.path_mods))
                         self.Path_Changelog = f'https://mods.vintagestory.at/show/mod/{mod_asset_id}#tab-files'
                         log_txt = self.get_changelog(self.Path_Changelog)  # On récupère le changelog
                         self.mods_updated[modname_value] = log_txt
                         print('\n')
                         self.nb_maj += 1
-            except urllib.error.URLError as er:
+            except urllib.error.URLError as err_url:
                 # Affiche de l'erreur si le lien n'est pas valide
-                print(er.reason)
-                with open('errors.log', 'a') as stderr_link, redirect_stderr(stderr_link):
-                    print(dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S") + ' : ' + str(err_lang), file=sys.stderr)
+                msg_error = f'{err_url.reason} : {modname_value}'
+                write_log(msg_error)
             except KeyError:
                 print(f'[green] {modname_value}[/green]: [red]{self.error} !!! {self.error_modid}[/red]')
 
@@ -593,6 +621,7 @@ class GetInfo:
         self.mod_url = None
         self.mod_id = mod_id
         self.modinfo_content = None
+        self.test_url_mod = ''
 
     def get_infos(self):
         # extraction modicon.png et renommage avec modid
@@ -632,12 +661,18 @@ class GetInfo:
             mod_asset_id = str(resp_dict['mod']['assetid'])
             mod_urlalias = str(resp_dict['mod']['urlalias'])
             if mod_urlalias:
-                url_mod = f'https://mods.vintagestory.at/{mod_urlalias}'
+                self.test_url_mod = f'https://mods.vintagestory.at/{mod_urlalias}'
             else:
-                url_mod = f'https://mods.vintagestory.at/show/mod/{mod_asset_id}'
-            return url_mod
-        except urllib.error.URLError:
-            pass
+                self.test_url_mod = f'https://mods.vintagestory.at/show/mod/{mod_asset_id}'
+            return self.test_url_mod
+        except urllib.error.URLError as err_url:
+            # Affiche de l'erreur si le lien n'est pas valide
+            msg_error = f'{err_url.reason} : {self.test_url_mod}'
+            write_log(msg_error)
+        except KeyError:
+            msg_error = traceback.format_exc()
+            write_log(msg_error)
+            sys.exit()
 
 
 class MakePdf:
@@ -708,17 +743,18 @@ argParser.add_argument("--exclusion", help="Write filenames of mods with extensi
 args = argParser.parse_args()
 # Fin des arguments
 
-# Efface le fichier errors.log si présent
-if Path('errors.log').is_file():
-    os.remove('errors.log')
+# Efface le fichier crash-log-XXXXXXXXXXX.txt si présents
+crashlog_path = Path('logs').joinpath('crash-log.txt')
+if crashlog_path.is_file():
+    os.remove(crashlog_path)
+
 
 # Test si il existe un fichier langue. (english par defaut)
 try:
     lang = LanguageChoice()
-except OSError | KeyError as err_lang:
-    print(err_lang, file=sys.stderr)
-    with open('errors.log', 'a') as stderr, redirect_stderr(stderr):
-        print(dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S") + ' : ' + str(err_lang), file=sys.stderr)
+except Exception:
+    traceback_info = traceback.format_exc()
+    write_log(traceback_info)
     sys.exit()
 
 
