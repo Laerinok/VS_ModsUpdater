@@ -57,7 +57,7 @@ def write_log(info_crash):
 
 class LanguageChoice:
     def __init__(self):
-        self.num_version = __version__
+        # self.num_version = __version__
         self.url_mods = 'https://mods.vintagestory.at/'
         self.path_lang = Path("lang")
         # Si on définit manuellement la langue via le fichier config
@@ -155,10 +155,10 @@ class MajScript(LanguageChoice):
             soup_changelog = soup.find("div", {"class": "changelogtext"})
             soup_link_prg = soup.find("a", {"class": "downloadbutton"})
             # on recupere la version du chanlog
-            regexp_ch_log_ver = '<strong>v(.*)</strong>'
-            ch_log_ver = re.search(regexp_ch_log_ver, str(soup_changelog))
+            regexp_online_ver_modsupdater = '<strong>v(.*)</strong>'
+            online_ver_modsupdater = re.search(regexp_online_ver_modsupdater, str(soup_changelog))
             # On compare les versions
-            result = VSUpdate.compversion(self.num_version, ch_log_ver[1])
+            result = VSUpdate.compversion_local(__version__, online_ver_modsupdater[1])
             if result == -1:
                 column, row = os.get_terminal_size()
                 maj_txt = f'[red]{self.existing_update}[/red]{self.url_mods.rstrip("/")}{soup_link_prg["href"]}'
@@ -218,7 +218,7 @@ class VSUpdate(LanguageChoice):
         # Définition des variables
         self.modename = None
         self.nb_maj = 0
-        self.gamever_max = self.config_read.get('Game_Version_max', 'version')  # On récupère la version max du jeu pour la maj
+        self.gamever_limit = self.config_read.get('Game_Version_max', 'version')  # On récupère la version max du jeu pour la maj
         self.modinfo_content = None
         # variables json_correction
         self.name_json = ''
@@ -390,10 +390,22 @@ class VSUpdate(LanguageChoice):
         return version1, version2
 
     @staticmethod
-    def compversion(v1, v2):
+    # Pour comparer la version locale et online
+    def compversion_local(v1, v2):  # (version locale, version online, first_min_version)
         compver = ''
         try:
             ver = VSUpdate.verif_formatversion(v1, v2)
+            compver = semver.compare(ver[0], ver[1])
+        except Exception:
+            write_log(traceback.format_exc())
+        return compver
+    
+    @staticmethod
+    # Pour comparer avec la version minimal nécessaire du jeu
+    def compversion_first_min_version(ver_locale, first_min_ver):
+        compver = ''
+        try:
+            ver = VSUpdate.verif_formatversion(first_min_ver, ver_locale)
             compver = semver.compare(ver[0], ver[1])
         except Exception:
             write_log(traceback.format_exc())
@@ -442,13 +454,13 @@ class VSUpdate(LanguageChoice):
         return log
 
     def accueil(self, _net_version):  # le _ en debut permet de lever le message "Parameter 'net_version' value is not used
-        if self.gamever_max == '100.0.0':
+        if self.gamever_limit == '100.0.0':
             self.version = self.version_max
         else:
-            self.version = self.gamever_max
+            self.version = self.gamever_limit
         # *** Texte d'accueil ***
         column, row = os.get_terminal_size()
-        txt_title01 = f'\n\n[bold cyan]{self.title} - v.{self.num_version} {self.author}[/bold cyan]'
+        txt_title01 = f'\n\n[bold cyan]{self.title} - v.{__version__} {self.author}[/bold cyan]'
         lines01 = txt_title01.splitlines()
         for line in lines01:
             print(line.center(column))
@@ -493,7 +505,7 @@ class VSUpdate(LanguageChoice):
         self.liste_mod_maj_filename.sort(key=lambda s: s.casefold())
         for mod_maj in self.liste_mod_maj_filename:
             modname_value = self.extract_modinfo(mod_maj)[0]
-            version_value = self.extract_modinfo(mod_maj)[2]
+            version_locale = self.extract_modinfo(mod_maj)[2]
             modid_value = self.extract_modinfo(mod_maj)[1]
             if modid_value == '':
                 modid_value = re.sub(r'\s', '', modname_value).lower()
@@ -506,25 +518,33 @@ class VSUpdate(LanguageChoice):
                 req_page = requests.get(str(mod_url_api))
                 resp_dict = req_page.json()
                 mod_asset_id = (resp_dict['mod']['assetid'])
-                mod_last_version = (resp_dict['mod']['releases'][0]['modversion'])
+                mod_last_version_online = (resp_dict['mod']['releases'][0]['modversion'])
                 mod_file_onlinepath = (resp_dict['mod']['releases'][0]['mainfile'])
                 # compare les versions des mods
-                result_compversion = self.compversion(version_value, mod_last_version)
-                print(f' [green]{modname_value[0].upper()}{modname_value[1:]}[/green]: {self.compver1} : {version_value} - {self.compver2} : {mod_last_version}')
-                # On récupère les version du jeu nécessaire pour le mod
+
+                print(f' [green]{modname_value[0].upper()}{modname_value[1:]}[/green]: {self.compver1} : {version_locale} - {self.compver2} : {mod_last_version_online}')
+                # On récupère les version du jeu nécessaire pour le mod (cad la version la plus basse necessaire)
                 mod_game_versions = resp_dict['mod']['releases'][0]['tags']
-                mod_game_version_max = self.get_max_version(mod_game_versions)
+                # debut modif
+                first_min_ver = None
+                for ver in mod_game_versions:
+                    first_min_ver = ver.split('v', 1)[1]
+                # fin modif
+                result_compversion_local = self.compversion_local(version_locale, mod_last_version_online)  # (version locale, version online)
+                # mod_game_version_max = self.get_max_version(mod_game_versions)
                 # On compare la version max souhaité à la version necessaire pour le mod
-                result_game_version = self.compversion(mod_game_version_max, self.gamever_max)
-                if result_game_version == 0 or result_game_version == -1:
+                # result_game_compare_version = self.compversion_local(mod_game_version_max, self.gamever_limit, first_min_ver)
+                result_game_compare_version = self.compversion_first_min_version(self.gamever_limit, first_min_ver)  # (version locale, version online,)
+                # if result_game_compare_version == 0 or result_game_compare_version == -1:
+                if result_game_compare_version == -1:  # On met à jour
                     #  #####
-                    if result_compversion == -1:
+                    if result_compversion_local == -1:
                         dl_link = f'{self.url_mods}{mod_file_onlinepath}'
                         resp = requests.get(str(dl_link), stream=True)
                         file_size = int(resp.headers.get("Content-length"))
                         file_size_mo = round(file_size / (1024 ** 2), 2)
                         print(f'\t{self.compver3} : {file_size_mo} {self.compver3a}')
-                        print(f'\t[green] {modname_value} v.{mod_last_version}[/green] {self.compver4}')
+                        print(f'\t[green] {modname_value} v.{mod_last_version_online}[/green] {self.compver4}')
                         try:
                             os.remove(filename_value)
                         except PermissionError:

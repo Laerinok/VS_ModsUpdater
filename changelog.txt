@@ -1,6 +1,7 @@
 v1.3.3
 - fixed: crash when mods do not have a modid key in the modinfo.json.
 - added: a crash-log.txt file is generated when a common crash occurs.
+- fixed: in some rare cases mods don't update if you set a limit for the game version.
 
 v1.3.2
 - fixed: another crash with some rare mods due to update to 1.3.0
