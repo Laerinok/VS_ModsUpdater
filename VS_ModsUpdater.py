@@ -12,7 +12,7 @@ Vintage Story mod management:
 - Possibility of generating a pdf file of the mod list
 """
 __author__ = "Laerinok"
-__date__ = "2023-03-01"
+__date__ = "2023-03-02"
 __version__ = "1.3.4"
 
 import argparse
@@ -272,13 +272,13 @@ class VSUpdate(LanguageChoice):
             config.write(cfgfile)
 
     def json_correction(self, txt_json):
-        self.regex_name_json = r'"name" {0,}: {0,}"(.*)",{0,}'
+        self.regex_name_json = r'"{0,1}name"{0,1} {0,}: {0,}"(.*)",{0,}'
         self.result_name_json = re.search(self.regex_name_json, txt_json, flags=re.IGNORECASE)
-        self.regex_version_json = r'"version" {0,}: {0,}"(.*)",{0,}'
+        self.regex_version_json = r'"{0,1}version"{0,1} {0,}: {0,}"(.*)",{0,}'
         self.result_version_json = re.search(self.regex_version_json, txt_json, flags=re.IGNORECASE)
-        self.regex_modid_json = r'"modid" {0,}: {0,}"(.*)",{0,}'
+        self.regex_modid_json = r'"{0,1}modid"{0,1} {0,}: {0,}"(.*)",{0,}'
         self.result_modid_json = re.search(self.regex_modid_json, txt_json, flags=re.IGNORECASE)
-        self.regex_moddesc_json = r'"description" {0,}: {0,}"(.*)",{0,}'
+        self.regex_moddesc_json = r'"{0,1}description"{0,1} {0,}: {0,}"(.*)",{0,}'
         self.result_moddesc_json = re.search(self.regex_moddesc_json, txt_json, flags=re.IGNORECASE)
         if self.result_name_json:
             self.name_json = self.result_name_json.group(2)
@@ -288,6 +288,7 @@ class VSUpdate(LanguageChoice):
             self.modid_json = self.result_modid_json.group(2)
         if self.result_moddesc_json:
             self.moddesc_json = self.result_moddesc_json.group(2)
+        print(f'self.name_json:{self.name_json}\nself.version_json:{self.version_json}\nself.modid_json:{self.modid_json}\nself.moddesc_json:{self.moddesc_json}')
         return self.name_json, self.version_json, self.modid_json, self.moddesc_json
 
     def extract_modinfo(self, file):
@@ -301,13 +302,13 @@ class VSUpdate(LanguageChoice):
                     with fichier_zip.open('modinfo.json') as modinfo_json:
                         self.modinfo_content = modinfo_json.read().decode('utf-8-sig')
             try:
-                regex_name = r'"name" {0,}: {0,}"(.*)",{0,}'
+                regex_name = r'"{0,1}name"{0,1} {0,}: {0,}"(.*)",{0,}'
                 result_name = re.search(regex_name, self.modinfo_content, flags=re.IGNORECASE)
-                regex_modid = r'"modid" {0,}: {0,}"(.*)",{0,}'
+                regex_modid = r'"{0,1}modid"{0,1} {0,}: {0,}"(.*)",{0,}'
                 result_modid = re.search(regex_modid, self.modinfo_content, flags=re.IGNORECASE)
-                regex_version = r'"version" {0,}: {0,}"(.*)",{0,}'
+                regex_version = r'"{0,1}version"{0,1} {0,}: {0,}"(.*)",{0,}'
                 result_version = re.search(regex_version, self.modinfo_content, flags=re.IGNORECASE)
-                regex_description = r'"description" {0,}: {0,}"(.*)",{0,}'
+                regex_description = r'"{0,1}description"{0,1} {0,}: {0,}"(.*)",{0,}'
                 result_description = re.search(regex_description, self.modinfo_content, flags=re.IGNORECASE)
                 mod_name = result_name.group(1)
                 if result_modid is not None:
@@ -595,15 +596,15 @@ class VSUpdate(LanguageChoice):
                 for modname, value in self.mods_updated.items():
                     local_version = value[0]
                     online_last_version = value[1]
-                    print(f' - [green]{modname} :[/green]')
+                    print(f' * [green]{modname} :[/green]')
                     logfile.write(f'\n\n- {modname} : v{local_version} -> v{online_last_version} ({value[2]["url"]}) :\n')  # affiche en plus l'url du mod
                     for log_version, log_txt in value[2].items():
                         if log_version != 'url':
                             print(f'\t[bold][yellow]Changelog {log_version} :[/yellow][/bold]')
                             logfile.write(f'\tChangelog {log_version} :\n')
                             for line in log_txt:
-                                print(f'\t\t[yellow]* {line}[/yellow]')
-                                logfile.write(f'\t\t* {line}\n')
+                                print(f'\t\t[yellow]- {line}[/yellow]')
+                                logfile.write(f'\t\t- {line}\n')
 
         elif self.nb_maj == 1:
             print(f'  [yellow]{self.summary3}[/yellow] \n')
@@ -618,15 +619,15 @@ class VSUpdate(LanguageChoice):
                 for modname, value in self.mods_updated.items():
                     local_version = value[0]
                     online_last_version = value[1]
-                    print(f' - [green]{modname} :[/green]')
+                    print(f' * [green]{modname} :[/green]')
                     logfile.write(f'\n\n- {modname} : v{local_version} -> v{online_last_version} ({value[2]["url"]}) :\n')  # affiche en plus l'url du mod
                     for log_version, log_txt in value[2].items():
                         if log_version != 'url':
                             print(f'\t[bold][yellow]Changelog {log_version} :[/yellow][/bold]')
                             logfile.write(f'\tChangelog {log_version} :\n')
                             for line in log_txt:
-                                print(f'\t\t[yellow]* {line}[/yellow]')
-                                logfile.write(f'\t\t* {line}\n')
+                                print(f'\t\t[yellow]- {line}[/yellow]')
+                                logfile.write(f'\t\t- {line}\n')
         else:
             print(f'  [yellow]{self.summary5}[/yellow]\n')
 
