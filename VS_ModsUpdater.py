@@ -12,8 +12,8 @@ Vintage Story mod management:
 - Possibility of generating a pdf file of the mod list
 """
 __author__ = "Laerinok"
-__date__ = "2023-02-28"
-__version__ = "1.3.3"
+__date__ = "2023-03-01"
+__version__ = "1.3.4"
 
 import argparse
 import configparser
@@ -33,7 +33,6 @@ import traceback
 import urllib.error
 import urllib.request
 import zipfile
-from contextlib import redirect_stderr
 from datetime import datetime
 from pathlib import Path
 
@@ -62,7 +61,7 @@ class LanguageChoice:
         self.path_lang = Path("lang")
         # Si on définit manuellement la langue via le fichier config
         self.config_file = Path('config.ini')
-        self.config_read = configparser.ConfigParser(allow_no_value=True)
+        self.config_read = configparser.ConfigParser(allow_no_value=True, interpolation=None)
         self.config_read.read(self.config_file, encoding='utf-8-sig')
         # On vérifie si args.language existe
         if args.language:
@@ -202,7 +201,7 @@ class VSUpdate(LanguageChoice):
                     sys.exit()
 
         # On charge le fichier config.ini
-        self.config_read = configparser.ConfigParser(allow_no_value=True)
+        self.config_read = configparser.ConfigParser(allow_no_value=True, interpolation=None)
         self.config_read.read(self.config_file, encoding='utf-8-sig')
         self.config_path = Path(self.config_read.get('ModPath', 'path'))
         self.path_mods = Path(self.config_path)
@@ -220,6 +219,8 @@ class VSUpdate(LanguageChoice):
         self.nb_maj = 0
         self.gamever_limit = self.config_read.get('Game_Version_max', 'version')  # On récupère la version max du jeu pour la maj
         self.modinfo_content = None
+        self.version_locale = ''
+        self.mod_last_version_online = ''
         # variables json_correction
         self.name_json = ''
         self.version_json = ''
@@ -246,7 +247,7 @@ class VSUpdate(LanguageChoice):
         # Création du config.ini si inexistant
         with open(self.config_file, "w", encoding="utf-8") as cfgfile:
             # Ajout du contenu
-            config = configparser.ConfigParser(allow_no_value=True)
+            config = configparser.ConfigParser(allow_no_value=True, interpolation=None)
             mu_ver = f'# ModsUpdater v{__version__}'
             config.set('', mu_ver)
             config.add_section('ModPath')
@@ -391,7 +392,7 @@ class VSUpdate(LanguageChoice):
 
     @staticmethod
     # Pour comparer la version locale et online
-    def compversion_local(v1, v2):  # (version locale, version online, first_min_version)
+    def compversion_local(v1, v2):  # (version locale, version online)
         compver = ''
         try:
             ver = VSUpdate.verif_formatversion(v1, v2)
@@ -423,29 +424,46 @@ class VSUpdate(LanguageChoice):
         # Scrap pour recuperer le changelog
         req_url = urllib.request.Request(url)
         log = {}
+        lst_log_desc = []
         try:
             urllib.request.urlopen(req_url)
             req_page_url = requests.get(url)
             page = req_page_url.content
             soup = BeautifulSoup(page, features="html.parser")
-            soup_changelog = soup.find("div", {"class": "changelogtext"})
-            # on recupere la version du chanlog
-            regexp_ch_log_ver = '<strong>(.*)</strong>'
-            ch_log_ver = re.search(regexp_ch_log_ver, str(soup_changelog))
-            # on récupère le changelog
-            regexp_ch_log_txt = '<li>(.*)</li>'
-            ch_log_txt = re.findall(regexp_ch_log_txt, str(soup_changelog))
-            if not ch_log_txt:
-                regexp_ch_log_txt = '<p>\W\s(.*)</p>'
-                ch_log_txt = re.findall(regexp_ch_log_txt, str(soup_changelog))
-                if not ch_log_txt:
-                    regexp_ch_log_txt = '<p>(.*)</p>'
-                    ch_log_txt = re.findall(regexp_ch_log_txt, str(soup_changelog))
-                    try:
-                        ch_log_txt = re.split(r'<br>|</br>|<br/>', ch_log_txt[0])
-                    except IndexError:
-                        ch_log_txt = ""
-            log[ch_log_ver.group(1)] = ch_log_txt
+            soup_full_changelog = soup.find("div", {"class": "changelogtext"})
+            # version
+            last_version = soup_full_changelog.find('strong').text
+            # On regarde si formatage par <ul></ul>
+            balise_ul = soup_full_changelog.find("li")
+            if balise_ul is not None:
+                lst_log_desc.append(balise_ul.text)
+            else:
+                # recherche des paragraphes, on remplace les balises <br>, </br>, <br/> par un saut de ligne \n
+                regexp_br = r'</{0,1}br/{0,1}>'
+                new_desc_log = re.sub(regexp_br, '\n', str(soup_full_changelog.p))
+                # recherche des paragraphes, on remplace les balises </p> par un saut de ligne \n
+                regexp_p = r'</{0,1}p>'
+                new_desc_log_2 = re.sub(regexp_p, '\n', new_desc_log)
+                # On supprime le tout premier \n
+                regex_final_desc_log_01 = r'[\n]^'
+                new_desc_log_3 = re.sub(regex_final_desc_log_01, '', new_desc_log_2)
+                # On supprime le(s) dernier(s) \n en fin de chaine
+                regex_final_desc_log = r'[\n]$'
+                final_desc_log = re.sub(regex_final_desc_log, '', new_desc_log_3)
+                # on separe la chaine au niveau de \n pour avoir un élément par ligne
+                lst_log_desc = final_desc_log.split('\n')
+                # On nettoie la liste
+                for entry in lst_log_desc:
+                    if entry == '':  # On supprime les entrées vide la liste
+                        lst_log_desc.remove(entry)
+                # On retire les caratceres spéciaux en début de ligne si il y en a
+                for item in lst_log_desc:
+                    index_item = lst_log_desc.index(item)
+                    regex_carspe = r'^[\W*]*'
+                    new_item = re.sub(regex_carspe, '', item)
+                    lst_log_desc[int(index_item)] = new_item
+            # #######
+            log[last_version] = lst_log_desc
             log['url'] = url
         except urllib.error.URLError as err_url:
             # Affiche de l'erreur si le lien n'est pas valide
@@ -453,7 +471,7 @@ class VSUpdate(LanguageChoice):
             write_log(msg_error)
         return log
 
-    def accueil(self, _net_version):  # le _ en debut permet de lever le message "Parameter 'net_version' value is not used
+    def accueil(self):  # le _ en debut permet de lever le message "Parameter 'net_version' value is not used
         if self.gamever_limit == '100.0.0':
             self.version = self.version_max
         else:
@@ -484,9 +502,8 @@ class VSUpdate(LanguageChoice):
             except configparser.NoSectionError:
                 pass
             except configparser.InterpolationSyntaxError as err_parsing:
-                print(f'Error in config.ini [Mod_Exclusion] mod{str(j)} : {err_parsing}')
-                with open('errors.txt', 'a') as stderr_parsing, redirect_stderr(stderr_parsing):
-                    print(dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S") + ' : ' + 'Error in config.ini [Mod_Exclusion] - mod' + str(j) + ' : ' + str(err_parsing), file=sys.stderr)
+                msg_error = f'Error in config.ini [Mod_Exclusion] - mod{str(j)} : {str(err_parsing)}'
+                write_log(msg_error)
                 sys.exit()
 
     def mods_list(self):
@@ -505,7 +522,7 @@ class VSUpdate(LanguageChoice):
         self.liste_mod_maj_filename.sort(key=lambda s: s.casefold())
         for mod_maj in self.liste_mod_maj_filename:
             modname_value = self.extract_modinfo(mod_maj)[0]
-            version_locale = self.extract_modinfo(mod_maj)[2]
+            self.version_locale = self.extract_modinfo(mod_maj)[2]
             modid_value = self.extract_modinfo(mod_maj)[1]
             if modid_value == '':
                 modid_value = re.sub(r'\s', '', modname_value).lower()
@@ -518,25 +535,19 @@ class VSUpdate(LanguageChoice):
                 req_page = requests.get(str(mod_url_api))
                 resp_dict = req_page.json()
                 mod_asset_id = (resp_dict['mod']['assetid'])
-                mod_last_version_online = (resp_dict['mod']['releases'][0]['modversion'])
+                self.mod_last_version_online = (resp_dict['mod']['releases'][0]['modversion'])
                 mod_file_onlinepath = (resp_dict['mod']['releases'][0]['mainfile'])
                 # compare les versions des mods
-
-                print(f' [green]{modname_value[0].upper()}{modname_value[1:]}[/green]: {self.compver1} : {version_locale} - {self.compver2} : {mod_last_version_online}')
+                print(f' [green]{modname_value[0].upper()}{modname_value[1:]}[/green]: {self.compver1} : {self.version_locale} - {self.compver2} : {self.mod_last_version_online}')
                 # On récupère les version du jeu nécessaire pour le mod (cad la version la plus basse necessaire)
                 mod_game_versions = resp_dict['mod']['releases'][0]['tags']
-                # debut modif
                 first_min_ver = None
                 for ver in mod_game_versions:
                     first_min_ver = ver.split('v', 1)[1]
-                # fin modif
-                result_compversion_local = self.compversion_local(version_locale, mod_last_version_online)  # (version locale, version online)
-                # mod_game_version_max = self.get_max_version(mod_game_versions)
+                result_compversion_local = self.compversion_local(self.version_locale, self.mod_last_version_online)  # (version locale, version online)
                 # On compare la version max souhaité à la version necessaire pour le mod
-                # result_game_compare_version = self.compversion_local(mod_game_version_max, self.gamever_limit, first_min_ver)
                 result_game_compare_version = self.compversion_first_min_version(self.gamever_limit, first_min_ver)  # (version locale, version online,)
-                # if result_game_compare_version == 0 or result_game_compare_version == -1:
-                if result_game_compare_version == -1:  # On met à jour
+                if result_game_compare_version == -1 or result_game_compare_version == 0:  # On met à jour
                     #  #####
                     if result_compversion_local == -1:
                         dl_link = f'{self.url_mods}{mod_file_onlinepath}'
@@ -544,9 +555,10 @@ class VSUpdate(LanguageChoice):
                         file_size = int(resp.headers.get("Content-length"))
                         file_size_mo = round(file_size / (1024 ** 2), 2)
                         print(f'\t{self.compver3} : {file_size_mo} {self.compver3a}')
-                        print(f'\t[green] {modname_value} v.{mod_last_version_online}[/green] {self.compver4}')
+                        print(f'\t[green] {modname_value} v.{self.mod_last_version_online}[/green] {self.compver4}')
                         try:
                             os.remove(filename_value)
+                            pass
                         except PermissionError:
                             msg_error = f'{filename_value} :\n\n\t {traceback.format_exc()}'
                             write_log(msg_error)
@@ -554,7 +566,12 @@ class VSUpdate(LanguageChoice):
                         wget.download(dl_link, str(self.path_mods))
                         self.Path_Changelog = f'https://mods.vintagestory.at/show/mod/{mod_asset_id}#tab-files'
                         log_txt = self.get_changelog(self.Path_Changelog)  # On récupère le changelog
-                        self.mods_updated[modname_value] = log_txt
+                        content_lst_mods_updated = [
+                            self.version_locale,
+                            self.mod_last_version_online,
+                            log_txt
+                        ]
+                        self.mods_updated[modname_value] = content_lst_mods_updated
                         print('\n')
                         self.nb_maj += 1
             except urllib.error.URLError as err_url:
@@ -564,7 +581,7 @@ class VSUpdate(LanguageChoice):
             except KeyError:
                 print(f'[green] {modname_value}[/green]: [red]{self.error} !!! {self.error_modid}[/red]')
 
-    def resume(self, netversion):
+    def resume(self):
         # Résumé de la maj
         if self.nb_maj > 1:
             print(f'  [yellow]{self.summary1}[/yellow] \n')
@@ -574,12 +591,13 @@ class VSUpdate(LanguageChoice):
                 os.mkdir('logs')
             log_path = Path(self.path_logs, log_filename)
             with open(log_path, 'w', encoding='utf-8-sig') as logfile:
-                logfile.write(f'\n\t\t\tMods Vintage Story {netversion} - {self.last_update} : {dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S")}\n\n')
-                for key, value in self.mods_updated.items():
-                    # print(f' - [green]{key} {value["url"]} :[/green]')  # affiche en plus l'url du mod
-                    print(f' - [green]{key} :[/green]')
-                    logfile.write(f'\n {key} ({value["url"]}) :\n')  # affiche en plus l'url du mod
-                    for log_version, log_txt in value.items():
+                logfile.write(f'\n\t\t\tMods Vintage Story - {self.last_update} : {dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S")}\n\n')
+                for modname, value in self.mods_updated.items():
+                    local_version = value[0]
+                    online_last_version = value[1]
+                    print(f' - [green]{modname} :[/green]')
+                    logfile.write(f'\n\n- {modname} : v{local_version} -> v{online_last_version} ({value[2]["url"]}) :\n')  # affiche en plus l'url du mod
+                    for log_version, log_txt in value[2].items():
                         if log_version != 'url':
                             print(f'\t[bold][yellow]Changelog {log_version} :[/yellow][/bold]')
                             logfile.write(f'\tChangelog {log_version} :\n')
@@ -595,11 +613,14 @@ class VSUpdate(LanguageChoice):
                 os.mkdir('logs')
             log_path = Path(self.path_logs, log_filename)
             with open(log_path, 'w', encoding='utf-8-sig') as logfile:
-                logfile.write(f'\n\t\t\tMods Vintage Story {netversion} - {self.last_update} : {dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S")}\n\n')
-                for key, value in self.mods_updated.items():
-                    print(f' - [green]{key} :[/green]')
-                    logfile.write(f'\n {key} ({value["url"]}) :\n')  # affiche en plus l'url du mod
-                    for log_version, log_txt in value.items():
+                logfile.write(
+                    f'\n\t\t\tMods Vintage Story - {self.last_update} : {dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S")}\n\n')
+                for modname, value in self.mods_updated.items():
+                    local_version = value[0]
+                    online_last_version = value[1]
+                    print(f' - [green]{modname} :[/green]')
+                    logfile.write(f'\n\n- {modname} : v{local_version} -> v{online_last_version} ({value[2]["url"]}) :\n')  # affiche en plus l'url du mod
+                    for log_version, log_txt in value[2].items():
                         if log_version != 'url':
                             print(f'\t[bold][yellow]Changelog {log_version} :[/yellow][/bold]')
                             logfile.write(f'\tChangelog {log_version} :\n')
@@ -680,10 +701,10 @@ class GetInfo:
             resp_dict = req_page.json()
             mod_asset_id = str(resp_dict['mod']['assetid'])
             mod_urlalias = str(resp_dict['mod']['urlalias'])
-            if mod_urlalias:
-                self.test_url_mod = f'https://mods.vintagestory.at/{mod_urlalias}'
-            else:
+            if mod_urlalias == 'None':
                 self.test_url_mod = f'https://mods.vintagestory.at/show/mod/{mod_asset_id}'
+            else:
+                self.test_url_mod = f'https://mods.vintagestory.at/{mod_urlalias}'
             return self.test_url_mod
         except urllib.error.URLError as err_url:
             # Affiche de l'erreur si le lien n'est pas valide
@@ -806,18 +827,18 @@ if not Path(config_path).is_file():
             path_mods = datapath()
 else:
     # On charge le fichier config.ini
-    config_read = configparser.ConfigParser(allow_no_value=True)
+    config_read = configparser.ConfigParser(allow_no_value=True, interpolation=None)
     config_read.read('config.ini', encoding='utf-8-sig')
     config_path = config_read.get('ModPath', 'path')
     path_mods = Path(config_path)
 
 if path_mods.is_dir():
     inst = VSUpdate(path_mods)
-    inst.accueil('inst')
+    inst.accueil()
     inst.mods_exclusion()
     inst.mods_list()
     inst.update_mods()
-    inst.resume('inst')
+    inst.resume()
 
 # Création du pdf (si argument nopause est false)
 if args.nopause == 'false':
