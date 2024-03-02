@@ -1,3 +1,11 @@
+v1.3.4
+- fixed: bad links in pdf file
+- fixed: crash if a mod whose name contains the character % is placed in the [Mod_Exclusion] section of the config.ini file
+- fixed: Some mods don't update if you set a limit for a game version.
+- fixed: crash if modinfo.json had keys without ""
+- Added: "Previous version to newest version" added to the logfile. You could so come back to a previous easily.
+- tweak: improve the logfile.txt. Some texts could not be displayed or in a bad way.
+
 v1.3.3
 - fixed: crash when mods do not have a modid key in the modinfo.json.
 - added: a crash-log.txt file is generated when a common crash occurs.
