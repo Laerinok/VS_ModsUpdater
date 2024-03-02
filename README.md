@@ -2,11 +2,8 @@
 ### <p align="center">Easily update your favorite mods</p>
 <br><br>
 
-### Description :
 This a third-party program. It means it is NOT a mod. You do not have to put it in the mods folder.
-
 All you have do to is :
-
 extract the archive
 run the program
 wait while checking/updating
