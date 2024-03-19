@@ -716,9 +716,8 @@ class GetInfo:
         self.moddesc_lst.append(self.mod_url)
         self.moddesc_lst.append(self.path_modicon)
         self.modsinfo_dic[self.mod_name] = self.moddesc_lst
-
         # On crée le csv
-        with open(self.csvfile, "a", encoding="windows-1252", newline='') as fichier:
+        with open(self.csvfile, "a", encoding="UTF-8", newline='') as fichier:
             objet_csv = csv.writer(fichier)
             for items in self.modsinfo_dic:
                 objet_csv.writerow([items, self.modsinfo_dic[items][0], self.modsinfo_dic[items][1], self.modsinfo_dic[items][2]])
@@ -785,7 +784,6 @@ class MakePdf:
             reader = csv.reader(csv_file, delimiter=',')
             for ligne in reader:
                 table_data.append(ligne)
-
         with monpdf.table(first_row_as_headings=False,
                           line_height=5,
                           width=190,
@@ -803,6 +801,7 @@ class MakePdf:
 
         try:
             monpdf.output(nom_fichier_pdf)
+            print(f'\n\n\t\t[blue]{lang.makingpdfended}\n[/blue]')
         except PermissionError:
             print(f'[red]{lang.ErrorCreationPDF}[/red]')
 
@@ -890,10 +889,11 @@ if args.nopause == 'false':
         nb_mods = 0
         nb_mods_ok = 0
         print('\n')
-        for mod in glob.glob(f'{path_mods}\*.*'):
+        mod_file_path = Path(path_mods, '*.*')
+        for mod in glob.glob(str(mod_file_path)):
             if os.path.splitext(mod)[1] == '.zip' or os.path.splitext(mod)[1] == '.cs':
                 nb_mods += 1
-        for modfilepath in glob.glob(f'{path_mods}\*.*'):
+        for modfilepath in glob.glob(str(mod_file_path)):
             if os.path.splitext(modfilepath)[1] == '.zip' or os.path.splitext(modfilepath)[1] == '.cs':
                 nb_mods_ok += 1
                 info_content = VSUpdate(modfilepath).extract_modinfo(modfilepath)
@@ -901,11 +901,11 @@ if args.nopause == 'false':
                 print(f'\t\t{lang.addingmodsinprogress} {nb_mods_ok}/{nb_mods}', end="\r")
         pdf = MakePdf()
         pdf.makepdf()
-        print(f'\n\n\t\t[blue]{lang.makingpdfended}\n[/blue]')
+        # print(f'\n\n\t\t[blue]{lang.makingpdfended}\n[/blue]')
         input(f'{lang.exiting_script}')
     elif make_pdf == str(lang.no).lower() or make_pdf == str(lang.no[0]).lower():
         print(f'{lang.end_of_prg} ')
-        time.sleep(3)
+        time.sleep(2)
 
 # On efface le dossier temp
 if Path('temp').is_dir():
