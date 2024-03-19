@@ -12,8 +12,8 @@ Vintage Story mod management:
 - Possibility of generating a pdf file of the mod list
 """
 __author__ = "Laerinok"
-__date__ = "2023-03-02"
-__version__ = "1.3.4"
+__date__ = "2023-03-19"
+__version__ = "1.3.5"
 
 import argparse
 import configparser
@@ -21,7 +21,6 @@ import csv
 import datetime as dt
 import glob
 import json
-import locale
 import os
 import pathlib
 import platform
@@ -56,7 +55,6 @@ def write_log(info_crash):
 
 class LanguageChoice:
     def __init__(self):
-        # self.num_version = __version__
         self.url_mods = 'https://mods.vintagestory.at/'
         self.path_lang = Path("lang")
         # Si on définit manuellement la langue via le fichier config
@@ -66,28 +64,14 @@ class LanguageChoice:
         # On vérifie si args.language existe
         if args.language:
             self.lang = f'{args.language}.json'
-        # Sinon on récupère manuellement la langue vvia config.ini
+        # Sinon on récupère manuellement la langue via config.ini
         else:
             try:
                 self.config_lang = self.config_read.get('Language', 'language')
                 self.lang = f'{self.config_lang}.json'
-
-            # ou on récupère la langue du système
+            # On charge le fichier en_US.json
             except (configparser.NoOptionError, configparser.NoSectionError):
-                myos = platform.system()
-                if myos == 'Windows':
-                    import ctypes
-                    windll = ctypes.windll.kernel32
-                    try:
-                        default_locale = locale.windows_locale[windll.GetUserDefaultLangID()]
-                        self.lang = f'{default_locale}.json'
-                    except KeyError:
-                        self.lang = 'en_US.json'
-                else:
-                    self.loc = locale.getlocale()
-                    self.lang = f"{self.loc[0]}.json"
-
-        # Def des path
+                self.lang = 'en_US.json'
         self.file_lang_path = Path(self.path_lang, self.lang)
         if not self.file_lang_path.is_file():
             self.file_lang_path = Path(self.path_lang, 'en_US.json')  # on charge en.json si aucun fichier de langue n'est présent
@@ -101,7 +85,12 @@ class LanguageChoice:
             self.title2 = desc['title2']
             self.version_max = desc['version_max']
             self.author = desc['author']
-            self.first_launch = desc['first_launch']
+            self.first_launch_title = desc['first_launch_title']
+            self.first_launch_lang_choice = desc['first_launch_lang_choice']
+            self.first_launch_config_done = desc['first_launch_config_done']
+            self.first_launch_pathmods = desc['first_launch_pathmods']
+            self.first_launch_lang_txt = desc['first_launch_lang_txt']
+            self.first_launch_game_ver_max = desc['first_launch_game_ver_max']
             self.first_launch2 = desc['first_launch2']
             self.first_launch3 = desc['first_launch3']
             self.err_list = desc['err_list']
@@ -135,6 +124,17 @@ class LanguageChoice:
 
         # On crée une liste pour les réponses O/N
         self.list_yesno = [self.yes.lower(), self.no.lower(), self.yes[0].lower(), self.no[0].lower()]
+        # Dico pour les langues - Region, langue-abr, langue, index
+        self.dic_lang = {
+            "DE": ["de", "Deutsch", '1'],
+            "US": ["en", "English", '2'],
+            "ES": ["es", "Español", '3'],
+            "FR": ["fr", "Français", '4'],
+            "IT": ["it", "Italiano", '5'],
+            "BR": ["pt", "Português", '6'],
+            "RU": ["ru", "Русский", '7'],
+            "UA": ["uk", "Українська", '8']
+        }
 
 
 class MajScript(LanguageChoice):
@@ -144,7 +144,12 @@ class MajScript(LanguageChoice):
 
     def check_update_script(self):
         # Scrap pour recuperer la derniere version en ligne du script
-        url_script = 'https://mods.vintagestory.at/modsupdater#tab-files'
+        if my_os == "Windows":
+            url_script = 'https://mods.vintagestory.at/modsupdater#tab-files'
+        elif my_os == 'Linux':
+            url_script = 'https://mods.vintagestory.at/modsupdaterforlinux#tab-files'
+        else:
+            url_script = ''
         req_url_script = urllib.request.Request(url_script)
         try:
             urllib.request.urlopen(req_url_script)
@@ -183,15 +188,32 @@ class VSUpdate(LanguageChoice):
         self.path_mods = Path(pathmods)
         self.url_api = 'https://mods.vintagestory.at/api/mod/'
         self.crashlog_path = Path('logs').joinpath('crash-log.txt')
+        self.lang_name = ''
         # Creation des dossiers et fichiers
         if not self.path_temp.is_dir():
             os.mkdir('temp')
         # On crée le fichier config.ini si inexistant, puis (si lancement du script via l'executable et non en ligne de commande) on sort du programme si on veut ajouter des mods à exclure
         if not self.config_file.is_file():
-            self.set_config_ini()
             if not args.modspath:
-                print(f'\t[bold cyan]{self.first_launch}[/bold cyan]')
-                print(f'\t[bold cyan]{self.first_launch2}[/bold cyan]')
+                print(f'\n\t\t[bold cyan]{self.first_launch_title}[/bold cyan]\n')
+                i = 1
+                for lan_2L, item in self.dic_lang.items():
+                    print(f'\t\t - {i}) {item[1]}, {item[0]}')
+                    i += 1
+                lang_choice_result = Prompt.ask(f'\n\t\t[bold cyan]{self.first_launch_lang_choice}[/bold cyan]', choices=['1', '2', '3', '4', '5', '6', '7', '8'], show_choices=False, default='2')
+                for region, lang_ext in self.dic_lang.items():
+                    if lang_choice_result == lang_ext[2]:
+                        self.file_lang_path = f'lang\{lang_ext[0]}_{region}.json'
+                        self.lang_name = lang_ext[1]
+
+                print(f'\n\t[bold cyan]{self.first_launch_config_done}[/bold cyan] :')
+                print(f'\t\t- [bold cyan]{self.first_launch_lang_txt}[/bold cyan] : {self.lang_name}')
+                print(f'\t\t- [bold cyan]{self.first_launch_pathmods} : {self.path_mods}[/bold cyan]')
+                print(f'\t\t- [bold cyan]{self.first_launch_game_ver_max}[/bold cyan]')
+                print(f'\n\t[bold cyan]{self.first_launch2}[/bold cyan]')
+
+                # On crée le fichier config.ini
+                self.set_config_ini()
                 maj_ok = Prompt.ask(f'\n\t{self.first_launch3}', choices=[self.list_yesno[0], self.list_yesno[1], self.list_yesno[2], self.list_yesno[3]])
                 if maj_ok == self.list_yesno[1] or maj_ok == self.list_yesno[3]:
                     print(f'{lang.end_of_prg} ')
@@ -221,6 +243,7 @@ class VSUpdate(LanguageChoice):
         self.modinfo_content = None
         self.version_locale = ''
         self.mod_last_version_online = ''
+        self.user_language = ''
         # variables json_correction
         self.name_json = ''
         self.version_json = ''
@@ -248,16 +271,21 @@ class VSUpdate(LanguageChoice):
         with open(self.config_file, "w", encoding="utf-8") as cfgfile:
             # Ajout du contenu
             config = configparser.ConfigParser(allow_no_value=True, interpolation=None)
-            mu_ver = f'# ModsUpdater v{__version__}'
-            config.set('', mu_ver)
+            mu_ver = __version__
+            config.add_section('ModsUpdater')
+            config.set('ModsUpdater', 'ver', mu_ver)
+            config.set('ModsUpdater', 'system', my_os)
             config.add_section('ModPath')
             config.set('ModPath', 'path', str(self.path_mods))
             config.add_section('Language')
             config.set('Language', str(self.language_comment))
+            #  Si l'argument lang a été transmis
             if args.language:
                 config.set('Language', 'language', args.language)  # from command line
             else:
-                config.set('Language', '#language', 'fr_FR')
+                regex_lang = r'lang\\([a-z]{1,2}_[A-Z]{1,2})'
+                resul_lang = re.search(regex_lang, str(self.file_lang_path))
+                config.set('Language', 'language', resul_lang[1])
             config.add_section('Game_Version_max')
             config.set('Game_Version_max', self.setconfig01)
             config.set('Game_Version_max', 'version', '100.0.0')
@@ -393,11 +421,10 @@ class VSUpdate(LanguageChoice):
 
     @staticmethod
     # Pour comparer la version locale et online
-    def compversion_local(v1, v2):  # (version locale, version online)
+    def compversion_local(ver_loc, ver_online):  # (version locale, version online)
         compver = ''
         try:
-            ver = VSUpdate.verif_formatversion(v1, v2)
-            compver = semver.compare(ver[0], ver[1])
+            compver = semver.compare(ver_loc, ver_online)
         except Exception:
             write_log(traceback.format_exc())
         return compver
@@ -581,6 +608,10 @@ class VSUpdate(LanguageChoice):
                 write_log(msg_error)
             except KeyError:
                 print(f'[green] {modname_value}[/green]: [red]{self.error} !!! {self.error_modid}[/red]')
+            except Exception:
+                print(f'[green] {modname_value}[/green]: [red]{self.error} !!! {self.error_modid}[/red]')
+                msg = f'Error with modid: {modname_value}\n{traceback.format_exc()}'
+                write_log(msg)
 
     def resume(self):
         # Résumé de la maj
