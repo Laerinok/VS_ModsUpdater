@@ -41,5 +41,6 @@
 	"makingpdfended" : "Criação de arquivo PDF concluída.",
 	"pdfTitle" : "Lista de mods instalados",
 	"ErrorCreationPDF" : "Não foi possível criar o arquivo. Verifique se ele já não está aberto.",
-	"end_of_prg" : "O ModsUpdater será fechado agora"
+	"end_of_prg" : "O ModsUpdater será fechado agora",
+	"error_msg" : "Ocorreu um erro. Consulte o arquivo de depuração."
 }

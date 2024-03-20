@@ -48,7 +48,7 @@ from rich.prompt import Prompt
 def write_log(info_crash):
     if not Path('logs').is_dir():
         os.mkdir('logs')
-    log_path = Path('logs').joinpath(f'crash-log-{dt.datetime.today().strftime("%Y%m%d%H%M%S")}.txt')
+    log_path = Path('logs').joinpath(f'debug-log-{dt.datetime.today().strftime("%Y%m%d%H%M%S")}.txt')
     with open(log_path, 'a', encoding='UTF-8') as crashlog_file:
         crashlog_file.write(f'{dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S")} : {info_crash}\n')
 
@@ -121,6 +121,7 @@ class LanguageChoice:
             self.pdfTitle = desc['pdfTitle']
             self.ErrorCreationPDF = desc['ErrorCreationPDF']
             self.end_of_prg = desc['end_of_prg']
+            self.error_msg = desc['error_msg']
 
         # On crée une liste pour les réponses O/N
         self.list_yesno = [self.yes.lower(), self.no.lower(), self.yes[0].lower(), self.no[0].lower()]
@@ -173,6 +174,7 @@ class MajScript:
 
         except urllib.error.URLError as err_url:
             # Affiche de l'erreur si le lien n'est pas valide
+            print(f'[red]{LanguageChoice().error_msg}[/red]')
             msg_error = f'{err_url.reason} : {url_script}'
             write_log(msg_error)
 
@@ -360,8 +362,10 @@ class VSUpdate:
                     else:
                         mod_description = ''
                 except Exception:
+                    print(f'[red]{LanguageChoice().error_msg}[/red]')
                     msg_error = f'{file} :\n\n\t {traceback.format_exc()}'
                     write_log(msg_error)
+                print(f'[red]{LanguageChoice().error_msg}[/red]')
                 msg_error = f'{file} :\n\n\t {traceback.format_exc()}'
                 write_log(msg_error)
         elif type_file == '.cs':
@@ -496,6 +500,7 @@ class VSUpdate:
             log['url'] = url
         except urllib.error.URLError as err_url:
             # Affiche de l'erreur si le lien n'est pas valide
+            print(f'[red]{LanguageChoice().error_msg}[/red]')
             msg_error = f'{err_url.reason} : {url}'
             write_log(msg_error)
         return log
@@ -531,6 +536,7 @@ class VSUpdate:
             except configparser.NoSectionError:
                 pass
             except configparser.InterpolationSyntaxError as err_parsing:
+                print(f'[red]{LanguageChoice().error_msg}[/red]')
                 msg_error = f'Error in config.ini [Mod_Exclusion] - mod{str(j)} : {str(err_parsing)}'
                 write_log(msg_error)
                 sys.exit()
@@ -589,6 +595,7 @@ class VSUpdate:
                             os.remove(filename_value)
                             pass
                         except PermissionError:
+                            print(f'[red]{LanguageChoice().error_msg}[/red]')
                             msg_error = f'{filename_value} :\n\n\t {traceback.format_exc()}'
                             write_log(msg_error)
                             sys.exit()
@@ -605,6 +612,7 @@ class VSUpdate:
                         self.nb_maj += 1
             except urllib.error.URLError as err_url:
                 # Affiche de l'erreur si le lien n'est pas valide
+                print(f'[red]{LanguageChoice().error_msg}[/red]')
                 msg_error = f'{err_url.reason} : {modname_value}'
                 write_log(msg_error)
             except KeyError:
@@ -740,9 +748,11 @@ class GetInfo:
             return self.test_url_mod
         except urllib.error.URLError as err_url:
             # Affiche de l'erreur si le lien n'est pas valide
+            print(f'[red]{LanguageChoice().error_msg}[/red]')
             msg_error = f'{err_url.reason} : {self.test_url_mod}'
             write_log(msg_error)
         except KeyError:
+            print(f'[red]{LanguageChoice().error_msg}[/red]')
             msg_error = traceback.format_exc()
             write_log(msg_error)
             sys.exit()
@@ -761,44 +771,58 @@ class MakePdf:
         self.csvfile = Path('temp', 'csvtemp.csv')
 
     def makepdf(self):
-        # On crée le pdf
-        monpdf = FPDF('P', 'mm', 'A4')
-        margintop_page = 10
-        monpdf.set_top_margin(margintop_page)
-        monpdf.set_auto_page_break(True, margin=10)
-        monpdf.set_page_background((200, 215, 150))
-        monpdf.add_page(same=True)
-        nom_fichier_pdf = f'VS_Mods_{self.annee}_{self.mois}_{self.jour}.pdf'
-        monpdf.oversized_images = "DOWNSCALE"
-        monpdf.oversized_images_ratio = 5
-        width_img = 180
-        x = (210-width_img)/2
-        monpdf.image('banner.png', x=x, y=5, w=width_img)
-        # Titre
-        monpdf.set_font("helvetica", size=20, style='B')
-        monpdf.set_text_color(6, 6, 65)  # Couleur RGB pour le titre
-        monpdf.set_y(45)
-        monpdf.cell(w=0, h=20, text=f'{self.langchoice.pdfTitle}', border=0, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C", fill=False)
-        table_data = []
-        # On remplit la liste table_data
-        with open(self.csvfile, newline='') as csv_file:
-            reader = csv.reader(csv_file, delimiter=',')
-            for ligne in reader:
-                table_data.append(ligne)
-        with monpdf.table(first_row_as_headings=False,
-                          line_height=5,
-                          width=190,
-                          col_widths=(5, 55, 130)) as table:
-            for ligne in table_data:
-                # cellule 1 - icone
-                row = table.row()
-                row.cell(img=ligne[3], img_fill_width=True, link=ligne[2])
-                # cellule 2 - nom du mod
-                monpdf.set_font("helvetica", size=7, style='B')
-                row.cell(ligne[0], link=ligne[2])
-                # cellule 3 - description
-                monpdf.set_font("helvetica", size=6)
-                row.cell(ligne[1])
+        try:
+            # On crée le pdf
+            monpdf = FPDF('P', 'mm', 'A4')
+            if my_os == 'Windows':
+                path_fonts = r'C:\Windows\Fonts\DejaVuSerif.ttf'
+            elif my_os == 'Linux':
+                path_fonts = r'/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf'
+            else:
+                path_fonts = None
+            monpdf.add_font('DejaVuSerif', '', path_fonts)
+            monpdf.add_font('DejaVuSerif', 'B', path_fonts)
+            margintop_page = 10
+            monpdf.set_top_margin(margintop_page)
+            monpdf.set_auto_page_break(True, margin=10)
+            monpdf.set_page_background((200, 215, 150))
+            monpdf.add_page(same=True)
+            nom_fichier_pdf = f'VS_Mods_{self.annee}_{self.mois}_{self.jour}.pdf'
+            monpdf.oversized_images = "DOWNSCALE"
+            monpdf.oversized_images_ratio = 5
+            width_img = 180
+            x = (210-width_img)/2
+            monpdf.image('banner.png', x=x, y=5, w=width_img)
+            # Titre
+            monpdf.set_font("DejaVuSerif", 'B', size=20)
+            monpdf.set_text_color(6, 6, 65)  # Couleur RGB pour le titre
+            monpdf.set_y(45)
+            monpdf.cell(w=0, h=20, text=f'{self.langchoice.pdfTitle}', border=0, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C", fill=False)
+            table_data = []
+            # On remplit la liste table_data
+            with open(self.csvfile, newline='') as csv_file:
+                reader = csv.reader(csv_file, delimiter=',')
+                for ligne in reader:
+                    table_data.append(ligne)
+            with monpdf.table(first_row_as_headings=False,
+                              line_height=5,
+                              width=190,
+                              col_widths=(5, 55, 130)) as table:
+                for ligne in table_data:
+                    # cellule 1 - icone
+                    row = table.row()
+                    row.cell(img=ligne[3], img_fill_width=True, link=ligne[2])
+                    # cellule 2 - nom du mod
+                    monpdf.set_font("DejaVuSerif", 'B', size=7)
+                    row.cell(ligne[0], link=ligne[2])
+                    # cellule 3 - description
+                    monpdf.set_font("DejaVuSerif", size=6)
+                    row.cell(ligne[1])
+        except Exception:
+            print(f'[red]{LanguageChoice().error_msg}[/red]')
+            msg_error = traceback.format_exc()
+            write_log(msg_error)
+            sys.exit()
 
         try:
             monpdf.output(nom_fichier_pdf)
@@ -815,12 +839,6 @@ argParser.add_argument("--nopause", help="Disable the pause at the end of the sc
 argParser.add_argument("--exclusion", help="Write filenames of mods with extension (in quotes) you want to exclude (each mod separated by space)", nargs="+")
 args = argParser.parse_args()
 # Fin des arguments
-
-# Efface le fichier crash-log-XXXXXXXXXXX.txt si présents
-crashlog_path = Path('logs').joinpath('crash-log.txt')
-if crashlog_path.is_file():
-    os.remove(crashlog_path)
-
 
 # Test si il existe un fichier langue. (english par defaut)
 try:
@@ -875,15 +893,15 @@ if path_mods.is_dir():
 # Création du pdf (si argument nopause est false)
 if args.nopause == 'false':
     make_pdf = None
-    while make_pdf not in {str(lang.yes).lower(), str(lang.yes[0]).lower(), str(lang.no).lower(), str(lang.no[0]).lower()}:
-        make_pdf = Prompt.ask(f'{lang.makepdf}', choices=[lang.list_yesno[0], lang.list_yesno[1], lang.list_yesno[2], lang.list_yesno[3]])
-    if make_pdf == str(lang.yes).lower() or make_pdf == str(lang.yes[0]).lower():
+    while make_pdf not in {str(LanguageChoice().yes).lower(), str(LanguageChoice().yes[0]).lower(), str(LanguageChoice().no).lower(), str(LanguageChoice().no[0]).lower()}:
+        make_pdf = Prompt.ask(f'{LanguageChoice().makepdf}', choices=[LanguageChoice().list_yesno[0], LanguageChoice().list_yesno[1], LanguageChoice().list_yesno[2], LanguageChoice().list_yesno[3]])
+    if make_pdf == str(LanguageChoice().yes).lower() or make_pdf == str(LanguageChoice().yes[0]).lower():
         # Construction du titre
         asterisk = '*'
-        nb_asterisk = len(lang.makePDFTitle) + 4
+        nb_asterisk = len(LanguageChoice().makePDFTitle) + 4
         string_asterisk = asterisk * nb_asterisk
         print(f'\t[green]{string_asterisk}[/green]')
-        print(f'\t[green]* {lang.makePDFTitle} *[/green]')
+        print(f'\t[green]* {LanguageChoice().makePDFTitle} *[/green]')
         print(f'\t[green]{string_asterisk}[/green]')
 
         # uniquement pour avoir le nb de mods (plus rapide car juste listing)
@@ -899,12 +917,12 @@ if args.nopause == 'false':
                 nb_mods_ok += 1
                 info_content = VSUpdate(modfilepath).extract_modinfo(modfilepath)
                 GetInfo(info_content[0], info_content[1], info_content[3], info_content[4]).get_infos()
-                print(f'\t\t{lang.addingmodsinprogress} {nb_mods_ok}/{nb_mods}', end="\r")
+                print(f'\t\t{LanguageChoice().addingmodsinprogress} {nb_mods_ok}/{nb_mods}', end="\r")
         pdf = MakePdf()
         pdf.makepdf()
-        input(f'{lang.exiting_script}')
-    elif make_pdf == str(lang.no).lower() or make_pdf == str(lang.no[0]).lower():
-        print(f'{lang.end_of_prg} ')
+        input(f'{LanguageChoice().exiting_script}')
+    elif make_pdf == str(lang.no).lower() or make_pdf == str(LanguageChoice().no[0]).lower():
+        print(f'{LanguageChoice().end_of_prg} ')
         time.sleep(2)
 
 # On efface le dossier temp
