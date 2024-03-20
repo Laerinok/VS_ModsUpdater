@@ -300,7 +300,8 @@ class VSUpdate:
             config.set('ModsUpdater', 'ver', mu_ver)
             config.set('ModsUpdater', 'system', my_os)
             config.set('ModsUpdater', '# Enable or disable Force_Update for every mods. If enabled, it will download the last version for ALL mods, even if the version is already the latest. (true/false default=false)')
-            config.set('ModsUpdater', 'force_update', 'false')
+            config.set('ModsUpdater', 'force_u'
+                                      'pdate', 'false')
             config.add_section('ModPath')
             config.set('ModPath', 'path', str(self.path_mods))
             config.add_section('Language')

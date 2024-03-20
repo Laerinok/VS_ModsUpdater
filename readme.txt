@@ -90,3 +90,27 @@ mod10 =
     - german (DeepL)
     - italian (DeepL)
     - ukrainian (DeepL)
+
+===============================================================
+For server :
+I added the possibility to run VS_ModsUpdater in command line with some arguments.
+
+You can run the script with the following arguments:
+	- For Python : VS_ModsUpdater.py [-h] [--modspath MODSPATH] [--language LANGUAGE] [--nopause {false,true}] [--exclusion EXCLUSION [EXCLUSION ...]] [--forceupdate {false,true}] [--makepdf {false,true}]
+	- For Windows : VS_ModsUpdater.exe [-h] [--modspath MODSPATH] [--language LANGUAGE] [--nopause {false,true}] [--exclusion EXCLUSION [EXCLUSION ...]] [--forceupdate {false,true}] [--makepdf {false,true}]
+	- For Linux : VS_ModsUpdater [-h] [--modspath MODSPATH] [--language LANGUAGE] [--nopause {false,true}] [--exclusion EXCLUSION [EXCLUSION ...]] [--forceupdate {false,true}] [--makepdf {false,true}]
+
+options :
+	-h, --help show this help message and exit
+	--modspath MODSPATH Enter the mods directory (in quotes). Quotes are needed only if there is some space in the path-name.
+	--language LANGUAGE Set the language file (as it is named in the lang directory, without extension)
+	--nopause {false,true} (default: false) Disable the pause at the end of the script. You NEED to set it to true if not the script prompts and wait your intervention.
+	--exclusion EXCLUSION [EXCLUSION ...] Write filenames of mods with extension (in quotes) you want to exclude (each mod separated by space). It's not really useful as you can set it later in the config.ini file.
+	--forceupdate {false,true} (default: false) Force ModsUpdater to update mods
+	--makepdf {false,true} (default: false) Create,at the end of the Update, a PDF file of all mods in the mods folder.
+
+Exemple of use :
+Linux : VS_ModsUpdater --language fr_FR --modspath "/home/VintagestoryData/mods" --nopause true
+WINDOWS: Add the desired arguments in the target field of a shortcut e.g "Path\to\ModsUpdater\VS_ModsUpdater.exe" --language fr_FR --modspath "D:\Game\VS_DATA\mods" --nopause true --forceupdate true
+
+I added a .bat file (Windows) and a .sh file (Linux) if needed. You only have to edit them and set the the right path for your configuration and yours desired arguments.
