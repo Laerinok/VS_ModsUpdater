@@ -197,25 +197,42 @@ class VSUpdate:
             os.mkdir('temp')
         # On crée le fichier config.ini si inexistant, puis (si lancement du script via l'executable et non en ligne de commande) on sort du programme si on veut ajouter des mods à exclure
         if not self.config_file.is_file():
-            if not args.modspath:
+            # if not args.modspath: # Debug
+            if args.nopause == 'false':
                 print(f'\n\t\t[bold cyan]{LanguageChoice().first_launch_title}[/bold cyan]\n')
                 i = 1
                 for lan_2L, item in LanguageChoice().dic_lang.items():
                     print(f'\t\t - {i}) {item[1]}, {item[0]}')
                     i += 1
+            if args.nopause == 'false':
                 lang_choice_result = Prompt.ask(f'\n\t\t[bold cyan]{LanguageChoice().first_launch_lang_choice}[/bold cyan]', choices=['1', '2', '3', '4', '5', '6', '7', '8'], show_choices=False, default='2')
                 for region, lang_ext in LanguageChoice().dic_lang.items():
                     if lang_choice_result == lang_ext[2]:
                         self.file_lang_path = f'lang\{lang_ext[0]}_{region}.json'
                         self.lang_name = lang_ext[1]
-                # On crée le fichier config.ini
-                self.set_config_ini()
-                print(f'\n\t[bold cyan]{LanguageChoice().first_launch_config_done}[/bold cyan] :')
-                print(f'\t\t- [bold cyan]{LanguageChoice().first_launch_lang_txt}[/bold cyan] : {self.lang_name}')
-                print(f'\t\t- [bold cyan]{LanguageChoice().first_launch_pathmods} : {self.path_mods}[/bold cyan]')
-                print(f'\t\t- [bold cyan]{LanguageChoice().first_launch_game_ver_max}[/bold cyan]')
+            else:
+                if args.language:
+                    self.file_lang_path = f'lang\{args.language}.json'
+                    for region, lang_ext in LanguageChoice().dic_lang.items():
+                        # On récupere le nom de la langue
+                        if region == args.language.split('_')[1]:
+                            self.lang_name = lang_ext[1]
+                else:
+                    self.file_lang_path = f'lang\en_US.json'
+                    self.lang_name = 'English'
+            # On crée le fichier config.ini
+            self.set_config_ini()
+            self.config_read = configparser.ConfigParser(allow_no_value=True, interpolation=None)
+            self.config_read.read(self.config_file, encoding='utf-8-sig')
+            self.force_update = self.config_read.get('ModsUpdater', 'force_update')  # On récupère la valeur de force_update
+            print(f'\n\t[bold cyan]{LanguageChoice().first_launch_config_done}[/bold cyan] :')
+            print(f'\t\t- [bold cyan]{LanguageChoice().first_launch_lang_txt}[/bold cyan] : {self.lang_name}')
+            print(f'\t\t- [bold cyan]{LanguageChoice().first_launch_pathmods} : {self.path_mods}[/bold cyan]')
+            print(f'\t\t- [bold cyan]{LanguageChoice().first_launch_game_ver_max}[/bold cyan]')
+            print(f'\t\t- [bold cyan]Force_Update : {self.force_update}[/bold cyan]')
+            # On demande de continuer ou on quitte
+            if args.nopause == 'false':
                 print(f'\n\t[bold cyan]{LanguageChoice().first_launch2}[/bold cyan]')
-                # On demande de continuer ou on quitte
                 maj_ok = Prompt.ask(f'\n\t{LanguageChoice().first_launch3}', choices=[LanguageChoice().list_yesno[0], LanguageChoice().list_yesno[1], LanguageChoice().list_yesno[2], LanguageChoice().list_yesno[3]])
                 if maj_ok == LanguageChoice().list_yesno[1] or maj_ok == LanguageChoice().list_yesno[3]:
                     print(f'{lang.end_of_prg} ')
@@ -242,6 +259,10 @@ class VSUpdate:
         self.modename = None
         self.nb_maj = 0
         self.gamever_limit = self.config_read.get('Game_Version_max', 'version')  # On récupère la version max du jeu pour la maj
+        if args.forceupdate:  # On récupère la valeur de force_update
+            self.force_update = args.forceupdate
+        else:
+            self.force_update = self.config_read.get('ModsUpdater', 'force_update')
         self.modinfo_content = None
         self.version_locale = ''
         self.mod_last_version_online = ''
@@ -278,6 +299,11 @@ class VSUpdate:
             config.set('ModsUpdater', '# Info about the creation of the config.ini file')
             config.set('ModsUpdater', 'ver', mu_ver)
             config.set('ModsUpdater', 'system', my_os)
+            config.set('ModsUpdater', '# Enable or disable Force_Update for every mods. If enabled, it will download the last version for ALL mods, even if the version is already the latest. (true/false default=false)')
+            if args.forceupdate:
+                config.set('ModsUpdater', 'force_update', args.forceupdate)
+            else:
+                config.set('ModsUpdater', 'force_update', 'false')
             config.add_section('ModPath')
             config.set('ModPath', 'path', str(self.path_mods))
             config.add_section('Language')
@@ -584,7 +610,7 @@ class VSUpdate:
                 result_game_compare_version = self.compversion_first_min_version(self.gamever_limit, first_min_ver)  # (version locale, version online,)
                 if result_game_compare_version == -1 or result_game_compare_version == 0:  # On met à jour
                     #  #####
-                    if result_compversion_local == -1:
+                    if result_compversion_local == -1 or (result_compversion_local == 0 and self.force_update.lower() == 'true'):
                         dl_link = f'{LanguageChoice().url_mods}{mod_file_onlinepath}'
                         resp = requests.get(str(dl_link), stream=True)
                         file_size = int(resp.headers.get("Content-length"))
@@ -837,6 +863,8 @@ argParser.add_argument("--modspath", help='Enter the mods directory (in quotes)'
 argParser.add_argument("--language", help='Set the language file', required=False)
 argParser.add_argument("--nopause", help="Disable the pause at the end of the script", choices=['false', 'true'], type=str.lower, required=False, default='false')
 argParser.add_argument("--exclusion", help="Write filenames of mods with extension (in quotes) you want to exclude (each mod separated by space)", nargs="+")
+argParser.add_argument("--forceupdate", help="Force ModsUpdater to update mods", choices=['false', 'true'], type=str.lower, required=False, default='false')
+argParser.add_argument("--makepdf", help="Create,at the end of the Update, a PDF file of all mods in the mods folder.", choices=['false', 'true'], type=str.lower, required=False, default='false')
 args = argParser.parse_args()
 # Fin des arguments
 
@@ -891,10 +919,13 @@ if path_mods.is_dir():
     inst.resume()
 
 # Création du pdf (si argument nopause est false)
-if args.nopause == 'false':
+if args.nopause == 'false' or args.makepdf == 'true':
     make_pdf = None
-    while make_pdf not in {str(LanguageChoice().yes).lower(), str(LanguageChoice().yes[0]).lower(), str(LanguageChoice().no).lower(), str(LanguageChoice().no[0]).lower()}:
-        make_pdf = Prompt.ask(f'{LanguageChoice().makepdf}', choices=[LanguageChoice().list_yesno[0], LanguageChoice().list_yesno[1], LanguageChoice().list_yesno[2], LanguageChoice().list_yesno[3]])
+    if args.makepdf == 'false':
+        while make_pdf not in {str(LanguageChoice().yes).lower(), str(LanguageChoice().yes[0]).lower(), str(LanguageChoice().no).lower(), str(LanguageChoice().no[0]).lower()}:
+            make_pdf = Prompt.ask(f'{LanguageChoice().makepdf}', choices=[LanguageChoice().list_yesno[0], LanguageChoice().list_yesno[1], LanguageChoice().list_yesno[2], LanguageChoice().list_yesno[3]])
+    else:
+        make_pdf = str(LanguageChoice().yes).lower()
     if make_pdf == str(LanguageChoice().yes).lower() or make_pdf == str(LanguageChoice().yes[0]).lower():
         # Construction du titre
         asterisk = '*'
@@ -920,7 +951,8 @@ if args.nopause == 'false':
                 print(f'\t\t{LanguageChoice().addingmodsinprogress} {nb_mods_ok}/{nb_mods}', end="\r")
         pdf = MakePdf()
         pdf.makepdf()
-        input(f'{LanguageChoice().exiting_script}')
+        if args.makepdf == 'false':
+            input(f'{LanguageChoice().exiting_script}')
     elif make_pdf == str(lang.no).lower() or make_pdf == str(LanguageChoice().no[0]).lower():
         print(f'{LanguageChoice().end_of_prg} ')
         time.sleep(2)

@@ -1,10 +1,12 @@
 v1.3.5
 - Change the way localization works. Users have choice at the first launch
-- Fixed: (Linux) The download link pointed to the wrong target
 - Fixed: Issue with some rare versioning with pre-release of mods
 - Fixed: Crash in rare case if modID not present in modinfo.json and the modname is not the same that the one in API. When it occurs a message is displayed and a crashlog is generated for information.
 - Fixed: Crash with pdf creation with cyrillic font
+- Added: Option to force update all mods
+- Added: Two new arguments for command line. '--makepdf' to create the pdf file and '--forceupdate' to force the update for every mods
 - Updated for linux
+- Fixed: (Linux) The download link pointed to the wrong target
 
 v1.3.4
 - fixed: bad links in pdf file
