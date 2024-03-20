@@ -3,13 +3,14 @@ v1.3.5
 - Fixed: (Linux) wrong DL link for updates ModsUpdater
 - Fixed: Issue with some rare versioning with pre-release of mods
 - Fixed: Crash in rare case if modID not present in modinfo.json and the modname is not the same that the one in API. When it occurs a message is displayed and a crashlog is generated for information.
+- Updated for linux
 
 v1.3.4
 - fixed: bad links in pdf file
 - fixed: crash if a mod whose name contains the character % is placed in the [Mod_Exclusion] section of the config.ini file
 - fixed: Some mods don't update if you set a limit for a game version.
 - fixed: crash if modinfo.json had keys without ""
-- Added: "Previous version to newest version" added to the logfile. You could so come back to a previous easily.
+- Added: "Previous version to newiest version" added to the logfile. You could so come back to a previous easily.
 - tweak: improve the logfile.txt. Some texts could not be displayed or in a bad way.
 
 v1.3.3
@@ -62,7 +63,7 @@ v1.0.9:
 
 v1.0.8:
 - Localization should be OK now
-- Logs files are created in the logs directory, not a the root anymore.
+- Logs files are created in the logs directory, not at the root anymore.
 
 v1.0.7:
 - fixed : issue due the fix in v1.0.6

@@ -64,7 +64,7 @@ class LanguageChoice:
         # On vérifie si args.language existe
         if args.language:
             self.lang = f'{args.language}.json'
-        # Sinon on récupère manuellement la langue via config.ini
+        # Sinon on récupère la langue via config.ini
         else:
             try:
                 self.config_lang = self.config_read.get('Language', 'language')
@@ -205,17 +205,16 @@ class VSUpdate(LanguageChoice):
                     if lang_choice_result == lang_ext[2]:
                         self.file_lang_path = f'lang\{lang_ext[0]}_{region}.json'
                         self.lang_name = lang_ext[1]
-
-                print(f'\n\t[bold cyan]{self.first_launch_config_done}[/bold cyan] :')
-                print(f'\t\t- [bold cyan]{self.first_launch_lang_txt}[/bold cyan] : {self.lang_name}')
-                print(f'\t\t- [bold cyan]{self.first_launch_pathmods} : {self.path_mods}[/bold cyan]')
-                print(f'\t\t- [bold cyan]{self.first_launch_game_ver_max}[/bold cyan]')
-                print(f'\n\t[bold cyan]{self.first_launch2}[/bold cyan]')
-
                 # On crée le fichier config.ini
                 self.set_config_ini()
-                maj_ok = Prompt.ask(f'\n\t{self.first_launch3}', choices=[self.list_yesno[0], self.list_yesno[1], self.list_yesno[2], self.list_yesno[3]])
-                if maj_ok == self.list_yesno[1] or maj_ok == self.list_yesno[3]:
+                print(f'\n\t[bold cyan]{LanguageChoice().first_launch_config_done}[/bold cyan] :')
+                print(f'\t\t- [bold cyan]{LanguageChoice().first_launch_lang_txt}[/bold cyan] : {self.lang_name}')
+                print(f'\t\t- [bold cyan]{LanguageChoice().first_launch_pathmods} : {self.path_mods}[/bold cyan]')
+                print(f'\t\t- [bold cyan]{LanguageChoice().first_launch_game_ver_max}[/bold cyan]')
+                print(f'\n\t[bold cyan]{LanguageChoice().first_launch2}[/bold cyan]')
+                # On demande de continuer ou on quitte
+                maj_ok = Prompt.ask(f'\n\t{LanguageChoice().first_launch3}', choices=[LanguageChoice().list_yesno[0], LanguageChoice().list_yesno[1], LanguageChoice().list_yesno[2], LanguageChoice().list_yesno[3]])
+                if maj_ok == LanguageChoice().list_yesno[1] or maj_ok == LanguageChoice().list_yesno[3]:
                     print(f'{lang.end_of_prg} ')
                     if Path('temp').is_dir():
                         shutil.rmtree('temp')
@@ -901,7 +900,6 @@ if args.nopause == 'false':
                 print(f'\t\t{lang.addingmodsinprogress} {nb_mods_ok}/{nb_mods}', end="\r")
         pdf = MakePdf()
         pdf.makepdf()
-        # print(f'\n\n\t\t[blue]{lang.makingpdfended}\n[/blue]')
         input(f'{lang.exiting_script}')
     elif make_pdf == str(lang.no).lower() or make_pdf == str(lang.no[0]).lower():
         print(f'{lang.end_of_prg} ')

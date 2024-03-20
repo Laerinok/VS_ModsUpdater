@@ -10,7 +10,7 @@
 	"first_launch_lang_choice" : "Choisissez votre langue",
 	"first_launch_config_done" : "Le fichier config.ini est créé avec les paramètres suivants",
 	"first_launch_pathmods" : "Emplacement des mods",
-	"first_launch_lang_txt" : "Langue (Prochain lancement)",
+	"first_launch_lang_txt" : "Langue",
 	"first_launch_game_ver_max" : "Version maximale du jeu pour les mises à jour de mods : Dernière version",
 	"first_launch2" : "Vous pouvez continuer avec le processus de mise à jour par défaut ou quitter et modifier le fichier config.ini",
 	"first_launch3" : "Continuer la mise à jour ?",
