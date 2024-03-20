@@ -857,12 +857,12 @@ class MakePdf:
 
 # Définitions des arguments
 argParser = argparse.ArgumentParser()
-argParser.add_argument("--modspath", help='Enter the mods directory (in quotes)', required=False, type=pathlib.Path)
-argParser.add_argument("--language", help='Set the language file', required=False)
-argParser.add_argument("--nopause", help="Disable the pause at the end of the script", choices=['false', 'true'], type=str.lower, required=False, default='false')
-argParser.add_argument("--exclusion", help="Write filenames of mods with extension (in quotes) you want to exclude (each mod separated by space)", nargs="+")
-argParser.add_argument("--forceupdate", help="Force ModsUpdater to update mods", choices=['false', 'true'], type=str.lower, required=False, default='false')
-argParser.add_argument("--makepdf", help="Create,at the end of the Update, a PDF file of all mods in the mods folder.", choices=['false', 'true'], type=str.lower, required=False, default='false')
+argParser.add_argument("--modspath", help='Enter the mods directory (in quotes).', required=False, type=pathlib.Path)
+argParser.add_argument("--language", help='Set the language file (Default=en_US - see the lang directory).', required=False)
+argParser.add_argument("--nopause", help="Disable the pause at the end of the script (default=false).", choices=['false', 'true'], type=str.lower, required=False, default='false')
+argParser.add_argument("--exclusion", help="Write filenames of mods with extension (in quotes) you want to exclude (each mod separated by space).", nargs="+")
+argParser.add_argument("--forceupdate", help="Force ModsUpdater to download the latest versions for ALL the mods (default=false).", choices=['false', 'true'], type=str.lower, required=False, default='false')
+argParser.add_argument("--makepdf", help="Create,at the end of the Update, a PDF file of all mods in the mods folder (default=false).", choices=['false', 'true'], type=str.lower, required=False, default='false')
 args = argParser.parse_args()
 # Fin des arguments
 

@@ -103,11 +103,11 @@ You can run the script with the following arguments:
 options :
 	-h, --help show this help message and exit
 	--modspath MODSPATH Enter the mods directory (in quotes). Quotes are needed only if there is some space in the path-name.
-	--language LANGUAGE Set the language file (as it is named in the lang directory, without extension)
-	--nopause {false,true} (default: false) Disable the pause at the end of the script. You NEED to set it to true if not the script prompts and wait your intervention.
+	--language LANGUAGE Set the language file (as it is named in the lang directory, without extension) (default=en_US)
+	--nopause {false,true} (default: false) Disable the pause at the end of the script. You NEED to set it to true if not the script prompts and wait your intervention. (default=false)
 	--exclusion EXCLUSION [EXCLUSION ...] Write filenames of mods with extension (in quotes) you want to exclude (each mod separated by space). It's not really useful as you can set it later in the config.ini file.
-	--forceupdate {false,true} (default: false) Force ModsUpdater to update mods
-	--makepdf {false,true} (default: false) Create,at the end of the Update, a PDF file of all mods in the mods folder.
+	--forceupdate {false,true} (default: false) Force ModsUpdater to download the latest versions for ALL the mods, even if they are up to date. (default=false)
+	--makepdf {false,true} (default: false) Create,at the end of the Update, a PDF file of all mods in the mods folder (default=false).
 
 Exemple of use :
 Linux : VS_ModsUpdater --language fr_FR --modspath "/home/VintagestoryData/mods" --nopause true
