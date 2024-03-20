@@ -3,6 +3,7 @@ v1.3.5
 - Fixed: (Linux) The download link pointed to the wrong target
 - Fixed: Issue with some rare versioning with pre-release of mods
 - Fixed: Crash in rare case if modID not present in modinfo.json and the modname is not the same that the one in API. When it occurs a message is displayed and a crashlog is generated for information.
+- Fixed: Crash with pdf creation with cyrillic font
 - Updated for linux
 
 v1.3.4
