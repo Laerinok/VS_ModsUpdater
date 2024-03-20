@@ -12,7 +12,7 @@ Vintage Story mod management:
 - Possibility of generating a pdf file of the mod list
 """
 __author__ = "Laerinok"
-__date__ = "2023-03-19"
+__date__ = "2023-03-20"
 __version__ = "1.3.5"
 
 import argparse
@@ -137,12 +137,13 @@ class LanguageChoice:
         }
 
 
-class MajScript(LanguageChoice):
+class MajScript:
     def __init__(self):
         # Version du script pour affichage titre.
         super().__init__()
 
-    def check_update_script(self):
+    @staticmethod
+    def check_update_script():
         # Scrap pour recuperer la derniere version en ligne du script
         if my_os == "Windows":
             url_script = 'https://mods.vintagestory.at/modsupdater#tab-files'
@@ -165,7 +166,7 @@ class MajScript(LanguageChoice):
             result = VSUpdate.compversion_local(__version__, online_ver_modsupdater[1])
             if result == -1:
                 column, row = os.get_terminal_size()
-                maj_txt = f'[red]{self.existing_update}[/red]{self.url_mods.rstrip("/")}{soup_link_prg["href"]}'
+                maj_txt = f'[red]{LanguageChoice().existing_update}[/red]{LanguageChoice().url_mods.rstrip("/")}{soup_link_prg["href"]}'
                 lines_update = maj_txt.splitlines()
                 for line in lines_update:
                     print(f'{line.center(column)}')
@@ -176,7 +177,7 @@ class MajScript(LanguageChoice):
             write_log(msg_error)
 
 
-class VSUpdate(LanguageChoice):
+class VSUpdate:
     def __init__(self, pathmods):
         # ##### Version du script pour affichage titre.
         super().__init__()
@@ -195,13 +196,13 @@ class VSUpdate(LanguageChoice):
         # On crée le fichier config.ini si inexistant, puis (si lancement du script via l'executable et non en ligne de commande) on sort du programme si on veut ajouter des mods à exclure
         if not self.config_file.is_file():
             if not args.modspath:
-                print(f'\n\t\t[bold cyan]{self.first_launch_title}[/bold cyan]\n')
+                print(f'\n\t\t[bold cyan]{LanguageChoice().first_launch_title}[/bold cyan]\n')
                 i = 1
-                for lan_2L, item in self.dic_lang.items():
+                for lan_2L, item in LanguageChoice().dic_lang.items():
                     print(f'\t\t - {i}) {item[1]}, {item[0]}')
                     i += 1
-                lang_choice_result = Prompt.ask(f'\n\t\t[bold cyan]{self.first_launch_lang_choice}[/bold cyan]', choices=['1', '2', '3', '4', '5', '6', '7', '8'], show_choices=False, default='2')
-                for region, lang_ext in self.dic_lang.items():
+                lang_choice_result = Prompt.ask(f'\n\t\t[bold cyan]{LanguageChoice().first_launch_lang_choice}[/bold cyan]', choices=['1', '2', '3', '4', '5', '6', '7', '8'], show_choices=False, default='2')
+                for region, lang_ext in LanguageChoice().dic_lang.items():
                     if lang_choice_result == lang_ext[2]:
                         self.file_lang_path = f'lang\{lang_ext[0]}_{region}.json'
                         self.lang_name = lang_ext[1]
@@ -272,12 +273,13 @@ class VSUpdate(LanguageChoice):
             config = configparser.ConfigParser(allow_no_value=True, interpolation=None)
             mu_ver = __version__
             config.add_section('ModsUpdater')
+            config.set('ModsUpdater', '# Info about the creation of the config.ini file')
             config.set('ModsUpdater', 'ver', mu_ver)
             config.set('ModsUpdater', 'system', my_os)
             config.add_section('ModPath')
             config.set('ModPath', 'path', str(self.path_mods))
             config.add_section('Language')
-            config.set('Language', str(self.language_comment))
+            config.set('Language', str(LanguageChoice().language_comment))
             #  Si l'argument lang a été transmis
             if args.language:
                 config.set('Language', 'language', args.language)  # from command line
@@ -286,10 +288,10 @@ class VSUpdate(LanguageChoice):
                 resul_lang = re.search(regex_lang, str(self.file_lang_path))
                 config.set('Language', 'language', resul_lang[1])
             config.add_section('Game_Version_max')
-            config.set('Game_Version_max', self.setconfig01)
+            config.set('Game_Version_max', LanguageChoice().setconfig01)
             config.set('Game_Version_max', 'version', '100.0.0')
             config.add_section('Mod_Exclusion')
-            config.set('Mod_Exclusion', self.setconfig)
+            config.set('Mod_Exclusion', LanguageChoice().setconfig)
             if args.exclusion:
                 for i in range(0, len(args.exclusion)):
                     config.set('Mod_Exclusion', 'mod' + str(i+1), args.exclusion[i])
@@ -392,7 +394,7 @@ class VSUpdate(LanguageChoice):
         for elem_cs in self.path_mods.glob('*.cs'):
             self.mod_filename.append(elem_cs.name)
         if len(self.mod_filename) == 0:
-            print(f"{self.err_list}")
+            print(f"{LanguageChoice().err_list}")
             os.system("pause")
             sys.exit()
         return self.mod_filename
@@ -500,19 +502,19 @@ class VSUpdate(LanguageChoice):
 
     def accueil(self):  # le _ en debut permet de lever le message "Parameter 'net_version' value is not used
         if self.gamever_limit == '100.0.0':
-            self.version = self.version_max
+            self.version = LanguageChoice().version_max
         else:
             self.version = self.gamever_limit
         # *** Texte d'accueil ***
         column, row = os.get_terminal_size()
-        txt_title01 = f'\n\n[bold cyan]{self.title} - v.{__version__} {self.author}[/bold cyan]'
+        txt_title01 = f'\n\n[bold cyan]{LanguageChoice().title} - v.{__version__} {LanguageChoice().author}[/bold cyan]'
         lines01 = txt_title01.splitlines()
         for line in lines01:
             print(line.center(column))
         # On vérifie si une version plus récente du script est en ligne
         maj_script = MajScript()
         maj_script.check_update_script()
-        txt_title02 = f'\n[cyan]{self.title2} : [bold]{self.version}[/bold][/cyan]\n'
+        txt_title02 = f'\n[cyan]{LanguageChoice().title2} : [bold]{self.version}[/bold][/cyan]\n'
         lines02 = txt_title02.splitlines()
         for line in lines02:
             print(f'{line.center(column)}')
@@ -565,7 +567,7 @@ class VSUpdate(LanguageChoice):
                 self.mod_last_version_online = (resp_dict['mod']['releases'][0]['modversion'])
                 mod_file_onlinepath = (resp_dict['mod']['releases'][0]['mainfile'])
                 # compare les versions des mods
-                print(f' [green]{modname_value[0].upper()}{modname_value[1:]}[/green]: {self.compver1} : {self.version_locale} - {self.compver2} : {self.mod_last_version_online}')
+                print(f' [green]{modname_value[0].upper()}{modname_value[1:]}[/green]: {LanguageChoice().compver1} : {self.version_locale} - {LanguageChoice().compver2} : {self.mod_last_version_online}')
                 # On récupère les version du jeu nécessaire pour le mod (cad la version la plus basse necessaire)
                 mod_game_versions = resp_dict['mod']['releases'][0]['tags']
                 first_min_ver = None
@@ -577,12 +579,12 @@ class VSUpdate(LanguageChoice):
                 if result_game_compare_version == -1 or result_game_compare_version == 0:  # On met à jour
                     #  #####
                     if result_compversion_local == -1:
-                        dl_link = f'{self.url_mods}{mod_file_onlinepath}'
+                        dl_link = f'{LanguageChoice().url_mods}{mod_file_onlinepath}'
                         resp = requests.get(str(dl_link), stream=True)
                         file_size = int(resp.headers.get("Content-length"))
                         file_size_mo = round(file_size / (1024 ** 2), 2)
-                        print(f'\t{self.compver3} : {file_size_mo} {self.compver3a}')
-                        print(f'\t[green] {modname_value} v.{self.mod_last_version_online}[/green] {self.compver4}')
+                        print(f'\t{LanguageChoice().compver3} : {file_size_mo} {LanguageChoice().compver3a}')
+                        print(f'\t[green] {modname_value} v.{self.mod_last_version_online}[/green] {LanguageChoice().compver4}')
                         try:
                             os.remove(filename_value)
                             pass
@@ -606,23 +608,23 @@ class VSUpdate(LanguageChoice):
                 msg_error = f'{err_url.reason} : {modname_value}'
                 write_log(msg_error)
             except KeyError:
-                print(f'[green] {modname_value}[/green]: [red]{self.error} !!! {self.error_modid}[/red]')
+                print(f'[green] {modname_value}[/green]: [red]{LanguageChoice().error} !!! {LanguageChoice().error_modid}[/red]')
             except Exception:
-                print(f'[green] {modname_value}[/green]: [red]{self.error} !!! {self.error_modid}[/red]')
+                print(f'[green] {modname_value}[/green]: [red]{LanguageChoice().error} !!! {LanguageChoice().error_modid}[/red]')
                 msg = f'Error with modid: {modname_value}\n{traceback.format_exc()}'
                 write_log(msg)
 
     def resume(self):
         # Résumé de la maj
         if self.nb_maj > 1:
-            print(f'  [yellow]{self.summary1}[/yellow] \n')
-            print(f'{self.summary2} :')
+            print(f'  [yellow]{LanguageChoice().summary1}[/yellow] \n')
+            print(f'{LanguageChoice().summary2} :')
             log_filename = f'updates_{dt.datetime.today().strftime("%Y%m%d_%H%M%S")}.txt'
             if not self.path_logs.is_dir():
                 os.mkdir('logs')
             log_path = Path(self.path_logs, log_filename)
             with open(log_path, 'w', encoding='utf-8-sig') as logfile:
-                logfile.write(f'\n\t\t\tMods Vintage Story - {self.last_update} : {dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S")}\n\n')
+                logfile.write(f'\n\t\t\tMods Vintage Story - {LanguageChoice().last_update} : {dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S")}\n\n')
                 for modname, value in self.mods_updated.items():
                     local_version = value[0]
                     online_last_version = value[1]
@@ -637,15 +639,15 @@ class VSUpdate(LanguageChoice):
                                 logfile.write(f'\t\t- {line}\n')
 
         elif self.nb_maj == 1:
-            print(f'  [yellow]{self.summary3}[/yellow] \n')
-            print(f'{self.summary4} :')
+            print(f'  [yellow]{LanguageChoice().summary3}[/yellow] \n')
+            print(f'{LanguageChoice().summary4} :')
             log_filename = f'updates_{dt.datetime.today().strftime("%Y%m%d_%H%M%S")}.txt'
             if not self.path_logs.is_dir():
                 os.mkdir('logs')
             log_path = Path(self.path_logs, log_filename)
             with open(log_path, 'w', encoding='utf-8-sig') as logfile:
                 logfile.write(
-                    f'\n\t\t\tMods Vintage Story - {self.last_update} : {dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S")}\n\n')
+                    f'\n\t\t\tMods Vintage Story - {LanguageChoice().last_update} : {dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S")}\n\n')
                 for modname, value in self.mods_updated.items():
                     local_version = value[0]
                     online_last_version = value[1]
@@ -659,13 +661,13 @@ class VSUpdate(LanguageChoice):
                                 print(f'\t\t[yellow]- {line}[/yellow]')
                                 logfile.write(f'\t\t- {line}\n')
         else:
-            print(f'  [yellow]{self.summary5}[/yellow]\n')
+            print(f'  [yellow]{LanguageChoice().summary5}[/yellow]\n')
 
         if len(self.mods_exclu) == 1:
             modinfo_values = self.extract_modinfo(self.mods_exclu[0])
-            print(f'\n {self.summary6} :\n - [red]{modinfo_values[0]} [italic](v.{modinfo_values[2]})[italic][/red]')
+            print(f'\n {LanguageChoice().summary6} :\n - [red]{modinfo_values[0]} [italic](v.{modinfo_values[2]})[italic][/red]')
         if len(self.mods_exclu) > 1:
-            print(f'\n {self.summary7} :')
+            print(f'\n {LanguageChoice().summary7} :')
             for k in range(0, len(self.mods_exclu)):
                 # On appelle la fonction pour extraire modinfo.json
                 modinfo_values = self.extract_modinfo(self.mods_exclu[k])
