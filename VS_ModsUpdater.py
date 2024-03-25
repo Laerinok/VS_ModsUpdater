@@ -802,9 +802,9 @@ class MakePdf:
         try:
             # On crée le pdf
             monpdf = FPDF('P', 'mm', 'A4')
-            path_font = r'font\arial.ttf'
-            monpdf.add_font('arial', '', path_font)
-            monpdf.add_font('arial', 'B', path_font)
+            path_font = Path('font', 'arial.ttf')
+            monpdf.add_font('arial', '', str(path_font))
+            monpdf.add_font('arial', 'B', str(path_font))
             margintop_page = 10
             monpdf.set_top_margin(margintop_page)
             monpdf.set_auto_page_break(True, margin=10)
@@ -887,28 +887,24 @@ def datapath():
 # On récupère l'argument modspath
 def arg_modspath():
     # On vérifie si le chemin contient des variables d'environnement
+    path_mods_raw = Path(args.modspath)
+    # On vérifie si la variable %appdata% (ou HOME) est dans le chemin et on la remplace par la variable systeme.
     if my_os == 'Windows':
-        path_mods_raw = Path(args.modspath)
-        # On vérifie si la variable %appdata% est dans le chemin et on la remplace par la variable systeme.
         regex_path_mods = r'(%APPDATA%)(.*)'
-        result_path_mods = re.search(regex_path_mods, str(path_mods_raw), flags=re.IGNORECASE)
-        if result_path_mods:
-            part2 = result_path_mods.group(2)
-            part2 = part2[1:]  # On retire le 1er \
-            arg_path_mods = Path(os.getenv('appdata'), part2)
-        else:
-            arg_path_mods = path_mods_raw
+        var_env = os.getenv('appdata')
     elif my_os == 'Linux':
-        path_mods_raw = Path(args.modspath)
-        # On vérifie si la variable %appdata% est dans le chemin et on la remplace par la variable systeme.
         regex_path_mods = r'(HOME)(.*)'
-        result_path_mods = re.search(regex_path_mods, str(path_mods_raw), flags=re.IGNORECASE)
-        if result_path_mods:
-            arg_path_mods = Path(os.getenv('appdata'), result_path_mods)
-        else:
-            arg_path_mods = path_mods_raw
+        var_env = os.getenv('HOME')
     else:
-        arg_path_mods = None
+        regex_path_mods = None
+        var_env = None
+    result_path_mods = re.search(regex_path_mods, str(path_mods_raw), flags=re.IGNORECASE)
+    if result_path_mods:
+        part2 = result_path_mods.group(2)
+        part2 = part2[1:]  # On retire le 1er charactere (\ ou /)
+        arg_path_mods = Path(var_env, part2)
+    else:
+        arg_path_mods = path_mods_raw
     return arg_path_mods
 
 
