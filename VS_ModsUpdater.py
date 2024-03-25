@@ -802,9 +802,8 @@ class MakePdf:
         try:
             # On crée le pdf
             monpdf = FPDF('P', 'mm', 'A4')
-            path_font = Path('font', 'FreeSerif.ttf')
-            monpdf.add_font('FreeSerif', '', str(path_font))
-            monpdf.add_font('FreeSerif', 'B', str(path_font))
+            monpdf.add_font('FreeSans', '', str(Path('font', 'FreeSans.ttf')))
+            monpdf.add_font('FreeSansBold', '', str(Path('font', 'FreeSansBold.ttf')))
             margintop_page = 10
             monpdf.set_top_margin(margintop_page)
             monpdf.set_auto_page_break(True, margin=10)
@@ -817,8 +816,8 @@ class MakePdf:
             x = (210-width_img)/2
             monpdf.image('banner.png', x=x, y=5, w=width_img)
             # Titre
-            monpdf.set_font("FreeSerif", 'B', size=25)
-            monpdf.set_text_color(6, 6, 65)  # Couleur RGB pour le titre
+            monpdf.set_font("FreeSansBold", '', size=20)
+            monpdf.set_text_color(0, 0, 0)  # Couleur RGB pour le titre
             monpdf.set_y(45)
             monpdf.cell(w=0, h=20, text=f'{self.langchoice.pdfTitle}', border=0, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C", fill=False)
             table_data = []
@@ -836,10 +835,10 @@ class MakePdf:
                     row = table.row()
                     row.cell(img=ligne[3], img_fill_width=True, link=ligne[2])
                     # cellule 2 - nom du mod
-                    monpdf.set_font("FreeSerif", 'B', size=9)
+                    monpdf.set_font("FreeSansBold", '', size=7)
                     row.cell(ligne[0], link=ligne[2])
                     # cellule 3 - description
-                    monpdf.set_font("FreeSerif", size=8)
+                    monpdf.set_font("FreeSans", '', size=7)
                     row.cell(ligne[1])
         except Exception:
             print(f'[red]{LanguageChoice().error_msg}[/red]')
