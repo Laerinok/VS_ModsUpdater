@@ -12,8 +12,8 @@ Vintage Story mod management:
 - Possibility of generating a pdf file of the mod list
 """
 __author__ = "Laerinok"
-__date__ = "2023-03-20"
-__version__ = "1.3.5"
+__date__ = "2023-03-26"
+__version__ = "1.3.6"
 
 import argparse
 import configparser
@@ -142,13 +142,14 @@ class MajScript:
     def __init__(self):
         # Version du script pour affichage titre.
         super().__init__()
+        # system
+        self.my_os = platform.system()
 
-    @staticmethod
-    def check_update_script():
+    def check_update_script(self):
         # Scrap pour recuperer la derniere version en ligne du script
-        if my_os == "Windows":
+        if self.my_os == "Windows":
             url_script = 'https://mods.vintagestory.at/modsupdater#tab-files'
-        elif my_os == 'Linux':
+        elif self.my_os == 'Linux':
             url_script = 'https://mods.vintagestory.at/modsupdaterforlinux#tab-files'
         else:
             url_script = ''
@@ -197,7 +198,6 @@ class VSUpdate:
             os.mkdir('temp')
         # On crée le fichier config.ini si inexistant, puis (si lancement du script via l'executable et non en ligne de commande) on sort du programme si on veut ajouter des mods à exclure
         if not self.config_file.is_file():
-            # if not args.modspath: # Debug
             if args.nopause == 'false':
                 print(f'\n\t\t[bold cyan]{LanguageChoice().first_launch_title}[/bold cyan]\n')
                 i = 1
@@ -222,6 +222,7 @@ class VSUpdate:
                     self.lang_name = 'English'
             # On crée le fichier config.ini
             self.set_config_ini()
+            # On récupère les valeurs de config.ini
             self.config_read = configparser.ConfigParser(allow_no_value=True, interpolation=None)
             self.config_read.read(self.config_file, encoding='utf-8-sig')
             self.force_update = self.config_read.get('ModsUpdater', 'force_update')  # On récupère la valeur de force_update
@@ -244,8 +245,11 @@ class VSUpdate:
         # On charge le fichier config.ini
         self.config_read = configparser.ConfigParser(allow_no_value=True, interpolation=None)
         self.config_read.read(self.config_file, encoding='utf-8-sig')
-        self.config_path = Path(self.config_read.get('ModPath', 'path'))
-        self.path_mods = Path(self.config_path)
+        if not args.modspath:
+            self.config_path = Path(self.config_read.get('ModPath', 'path'))
+            self.path_mods = Path(self.config_path)
+        else:
+            self.path_mods = arg_modspath()
         # Définition des listes
         self.mod_filename = []
         self.mod_name_list = []
@@ -295,13 +299,13 @@ class VSUpdate:
             # Ajout du contenu
             config = configparser.ConfigParser(allow_no_value=True, interpolation=None)
             mu_ver = __version__
+            my_system = platform.system()
             config.add_section('ModsUpdater')
             config.set('ModsUpdater', '# Info about the creation of the config.ini file')
             config.set('ModsUpdater', 'ver', mu_ver)
-            config.set('ModsUpdater', 'system', my_os)
+            config.set('ModsUpdater', 'system', my_system)
             config.set('ModsUpdater', '# Enable or disable Force_Update for every mods. If enabled, it will download the last version for ALL mods, even if the version is already the latest. (true/false default=false)')
-            config.set('ModsUpdater', 'force_u'
-                                      'pdate', 'false')
+            config.set('ModsUpdater', 'force_update', 'false')
             config.add_section('ModPath')
             config.set('ModPath', 'path', str(self.path_mods))
             config.add_section('Language')
@@ -798,14 +802,8 @@ class MakePdf:
         try:
             # On crée le pdf
             monpdf = FPDF('P', 'mm', 'A4')
-            if my_os == 'Windows':
-                path_fonts = r'C:\Windows\Fonts\DejaVuSerif.ttf'
-            elif my_os == 'Linux':
-                path_fonts = r'/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf'
-            else:
-                path_fonts = None
-            monpdf.add_font('DejaVuSerif', '', path_fonts)
-            monpdf.add_font('DejaVuSerif', 'B', path_fonts)
+            monpdf.add_font('FreeSans', '', str(Path('font', 'FreeSans.ttf')))
+            monpdf.add_font('FreeSansBold', '', str(Path('font', 'FreeSansBold.ttf')))
             margintop_page = 10
             monpdf.set_top_margin(margintop_page)
             monpdf.set_auto_page_break(True, margin=10)
@@ -818,8 +816,8 @@ class MakePdf:
             x = (210-width_img)/2
             monpdf.image('banner.png', x=x, y=5, w=width_img)
             # Titre
-            monpdf.set_font("DejaVuSerif", 'B', size=20)
-            monpdf.set_text_color(6, 6, 65)  # Couleur RGB pour le titre
+            monpdf.set_font("FreeSansBold", '', size=20)
+            monpdf.set_text_color(0, 0, 0)  # Couleur RGB pour le titre
             monpdf.set_y(45)
             monpdf.cell(w=0, h=20, text=f'{self.langchoice.pdfTitle}', border=0, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C", fill=False)
             table_data = []
@@ -837,10 +835,10 @@ class MakePdf:
                     row = table.row()
                     row.cell(img=ligne[3], img_fill_width=True, link=ligne[2])
                     # cellule 2 - nom du mod
-                    monpdf.set_font("DejaVuSerif", 'B', size=7)
+                    monpdf.set_font("FreeSansBold", '', size=7)
                     row.cell(ligne[0], link=ligne[2])
                     # cellule 3 - description
-                    monpdf.set_font("DejaVuSerif", size=6)
+                    monpdf.set_font("FreeSans", '', size=7)
                     row.cell(ligne[1])
         except Exception:
             print(f'[red]{LanguageChoice().error_msg}[/red]')
@@ -853,6 +851,10 @@ class MakePdf:
             print(f'\n\n\t\t[blue]{lang.makingpdfended}\n[/blue]')
         except PermissionError:
             print(f'[red]{lang.ErrorCreationPDF}[/red]')
+
+
+# On récupère le system
+my_os = platform.system()
 
 
 # Définitions des arguments
@@ -881,11 +883,34 @@ def datapath():
     return new_path_data
 
 
+# On récupère l'argument modspath
+def arg_modspath():
+    # On vérifie si le chemin contient des variables d'environnement
+    path_mods_raw = Path(args.modspath)
+    # On vérifie si la variable %appdata% (ou HOME) est dans le chemin et on la remplace par la variable systeme.
+    if my_os == 'Windows':
+        regex_path_mods = r'(%APPDATA%)(.*)'
+        var_env = os.getenv('appdata')
+    elif my_os == 'Linux':
+        regex_path_mods = r'(HOME)(.*)'
+        var_env = os.getenv('HOME')
+    else:
+        regex_path_mods = None
+        var_env = None
+    result_path_mods = re.search(regex_path_mods, str(path_mods_raw), flags=re.IGNORECASE)
+    if result_path_mods:
+        part2 = result_path_mods.group(2)
+        part2 = part2[1:]  # On retire le 1er charactere (\ ou /)
+        arg_path_mods = Path(var_env, part2)
+    else:
+        arg_path_mods = path_mods_raw
+    return arg_path_mods
+
+
 # On récupère le dossier des mods par argument, sinon on definit par defaut
 if args.modspath:
-    path_mods = Path(args.modspath)
+    path_mods = arg_modspath()
 else:
-    my_os = platform.system()
     if my_os == 'Windows':
         # On cherche les versions installées de Vintage Story
         path_mods = Path(os.getenv('appdata'), 'VintagestoryData', 'Mods')
@@ -902,11 +927,14 @@ if not Path(config_path).is_file():
         while not path_mods.is_dir():
             path_mods = datapath()
 else:
-    # On charge le fichier config.ini
-    config_read = configparser.ConfigParser(allow_no_value=True, interpolation=None)
-    config_read.read('config.ini', encoding='utf-8-sig')
-    config_path = config_read.get('ModPath', 'path')
-    path_mods = Path(config_path)
+    # On charge le fichier config.ini si --modspath non donné
+    if not args.modspath:
+        config_read = configparser.ConfigParser(allow_no_value=True, interpolation=None)
+        config_read.read('config.ini', encoding='utf-8-sig')
+        config_path = config_read.get('ModPath', 'path')
+        path_mods = Path(config_path)
+    else:
+        path_mods = arg_modspath()
 
 if path_mods.is_dir():
     inst = VSUpdate(path_mods)
