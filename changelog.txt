@@ -1,3 +1,7 @@
+v1.3.6:
+- fixed: crash when create pdf file if the font was not installed on system
+- fixed: crash when using --moddpath.
+
 v1.3.5
 - Change the way localization works. Users have choice at the first launch
 - Fixed: Issue with some rare versioning with pre-release of mods

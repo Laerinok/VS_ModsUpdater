@@ -12,7 +12,7 @@ Vintage Story mod management:
 - Possibility of generating a pdf file of the mod list
 """
 __author__ = "Laerinok"
-__date__ = "2023-03-25"
+__date__ = "2023-03-26"
 __version__ = "1.3.6"
 
 import argparse
