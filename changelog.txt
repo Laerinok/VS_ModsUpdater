@@ -1,4 +1,7 @@
-v1.3.6:
+v1.4.0
+- Added: Option in config.ini and argument to exclude -dev version of mods from updating process.
+
+v1.3.6
 - fixed: crash when create pdf file if the font was not installed on system
 - fixed: crash when using --moddpath.
 
