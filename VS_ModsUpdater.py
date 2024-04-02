@@ -12,8 +12,8 @@ Vintage Story mod management:
 - Possibility of generating a pdf file of the mod list
 """
 __author__ = "Laerinok"
-__date__ = "2023-03-26"
-__version__ = "1.3.6"
+__date__ = "2023-03-29"
+__version__ = "1.4.0"
 
 import argparse
 import configparser
@@ -46,6 +46,7 @@ from rich.prompt import Prompt
 
 # Creation of a logfile
 def write_log(info_crash):
+    print(f'An error occured. Please see the debug-log file in logs folder for more information.')
     if not Path('logs').is_dir():
         os.mkdir('logs')
     log_path = Path('logs').joinpath(f'debug-log-{dt.datetime.today().strftime("%Y%m%d%H%M%S")}.txt')
@@ -156,7 +157,7 @@ class MajScript:
         req_url_script = urllib.request.Request(url_script)
         try:
             urllib.request.urlopen(req_url_script)
-            req_page_url = requests.get(url_script)
+            req_page_url = requests.get(url_script, timeout=2)
             page = req_page_url.content
             soup = BeautifulSoup(page, features="html.parser")
             soup_changelog = soup.find("div", {"class": "changelogtext"})
@@ -172,7 +173,8 @@ class MajScript:
                 lines_update = maj_txt.splitlines()
                 for line in lines_update:
                     print(f'{line.center(column)}')
-
+        except requests.exceptions.ReadTimeout:
+            write_log('ReadTimeout error: Server did not respond within the specified timeout.')
         except urllib.error.URLError as err_url:
             # Affiche de l'erreur si le lien n'est pas valide
             print(f'[red]{LanguageChoice().error_msg}[/red]')
@@ -226,11 +228,13 @@ class VSUpdate:
             self.config_read = configparser.ConfigParser(allow_no_value=True, interpolation=None)
             self.config_read.read(self.config_file, encoding='utf-8-sig')
             self.force_update = self.config_read.get('ModsUpdater', 'force_update')  # On récupère la valeur de force_update
+            self.disable_mod_dev = self.config_read.get('ModsUpdater', 'disable_mod_dev')  # On récupère l'option pour la maj ou non des version dev des mod.
             print(f'\n\t[bold cyan]{LanguageChoice().first_launch_config_done}[/bold cyan] :')
             print(f'\t\t- [bold cyan]{LanguageChoice().first_launch_lang_txt}[/bold cyan] : {self.lang_name}')
             print(f'\t\t- [bold cyan]{LanguageChoice().first_launch_pathmods} : {self.path_mods}[/bold cyan]')
             print(f'\t\t- [bold cyan]{LanguageChoice().first_launch_game_ver_max}[/bold cyan]')
-            print(f'\t\t- [bold cyan]Force_Update : {self.force_update}[/bold cyan]')
+            print(f'\t\t- [bold cyan]force_Update : {self.force_update}[/bold cyan]')
+            print(f'\t\t- [bold cyan]disable_mod_dev : {self.disable_mod_dev}[/bold cyan]')
             # On demande de continuer ou on quitte
             if args.nopause == 'false':
                 print(f'\n\t[bold cyan]{LanguageChoice().first_launch2}[/bold cyan]')
@@ -267,6 +271,10 @@ class VSUpdate:
             self.force_update = args.forceupdate
         else:
             self.force_update = self.config_read.get('ModsUpdater', 'force_update')
+        if args.disable_mod_dev:
+            self.disable_mod_dev = args.disable_mod_dev
+        else:
+            self.disable_mod_dev = self.config_read.get('ModsUpdater', 'disable_mod_dev')
         self.modinfo_content = None
         self.version_locale = ''
         self.mod_last_version_online = ''
@@ -306,6 +314,8 @@ class VSUpdate:
             config.set('ModsUpdater', 'system', my_system)
             config.set('ModsUpdater', '# Enable or disable Force_Update for every mods. If enabled, it will download the last version for ALL mods, even if the version is already the latest. (true/false default=false)')
             config.set('ModsUpdater', 'force_update', 'false')
+            config.set('ModsUpdater', '# Allow to disable or enable update of mod in dev or prerelease (true/false default=false).')
+            config.set('ModsUpdater', 'disable_mod_dev', 'false')
             config.add_section('ModPath')
             config.set('ModPath', 'path', str(self.path_mods))
             config.add_section('Language')
@@ -488,7 +498,7 @@ class VSUpdate:
         lst_log_desc = []
         try:
             urllib.request.urlopen(req_url)
-            req_page_url = requests.get(url)
+            req_page_url = requests.get(url, timeout=2)
             page = req_page_url.content
             soup = BeautifulSoup(page, features="html.parser")
             soup_full_changelog = soup.find("div", {"class": "changelogtext"})
@@ -526,6 +536,8 @@ class VSUpdate:
             # #######
             log[last_version] = lst_log_desc
             log['url'] = url
+        except requests.exceptions.ReadTimeout:
+            write_log('ReadTimeout error: Server did not respond within the specified timeout.')
         except urllib.error.URLError as err_url:
             # Affiche de l'erreur si le lien n'est pas valide
             print(f'[red]{LanguageChoice().error_msg}[/red]')
@@ -595,59 +607,58 @@ class VSUpdate:
             req = urllib.request.Request(str(mod_url_api))
             try:
                 urllib.request.urlopen(req)  # On teste l'existence du lien
-                req_page = requests.get(str(mod_url_api))
+                req_page = requests.get(str(mod_url_api), timeout=2)
                 resp_dict = req_page.json()
                 mod_asset_id = (resp_dict['mod']['assetid'])
                 self.mod_last_version_online = (resp_dict['mod']['releases'][0]['modversion'])
                 mod_file_onlinepath = (resp_dict['mod']['releases'][0]['mainfile'])
+                mod_prerelease_value = semver.Version.parse(self.mod_last_version_online)
                 # compare les versions des mods
                 print(f' [green]{modname_value[0].upper()}{modname_value[1:]}[/green]: {LanguageChoice().compver1} : {self.version_locale} - {LanguageChoice().compver2} : {self.mod_last_version_online}')
-                # On récupère les version du jeu nécessaire pour le mod (cad la version la plus basse necessaire)
-                mod_game_versions = resp_dict['mod']['releases'][0]['tags']
-                first_min_ver = None
-                for ver in mod_game_versions:
-                    first_min_ver = ver.split('v', 1)[1]
-                result_compversion_local = self.compversion_local(self.version_locale, self.mod_last_version_online)  # (version locale, version online)
-                # On compare la version max souhaité à la version necessaire pour le mod
-                result_game_compare_version = self.compversion_first_min_version(self.gamever_limit, first_min_ver)  # (version locale, version online,)
-                if result_game_compare_version == -1 or result_game_compare_version == 0:  # On met à jour
-                    #  #####
-                    if result_compversion_local == -1 or (result_compversion_local == 0 and self.force_update.lower() == 'true'):
-                        dl_link = f'{LanguageChoice().url_mods}{mod_file_onlinepath}'
-                        resp = requests.get(str(dl_link), stream=True)
-                        file_size = int(resp.headers.get("Content-length"))
-                        file_size_mo = round(file_size / (1024 ** 2), 2)
-                        print(f'\t{LanguageChoice().compver3} : {file_size_mo} {LanguageChoice().compver3a}')
-                        print(f'\t[green] {modname_value} v.{self.mod_last_version_online}[/green] {LanguageChoice().compver4}')
-                        try:
-                            os.remove(filename_value)
-                            pass
-                        except PermissionError:
-                            print(f'[red]{LanguageChoice().error_msg}[/red]')
-                            msg_error = f'{filename_value} :\n\n\t {traceback.format_exc()}'
-                            write_log(msg_error)
-                            sys.exit()
-                        wget.download(dl_link, str(self.path_mods))
-                        self.Path_Changelog = f'https://mods.vintagestory.at/show/mod/{mod_asset_id}#tab-files'
-                        log_txt = self.get_changelog(self.Path_Changelog)  # On récupère le changelog
-                        content_lst_mods_updated = [
-                            self.version_locale,
-                            self.mod_last_version_online,
-                            log_txt
-                        ]
-                        self.mods_updated[modname_value] = content_lst_mods_updated
-                        print('\n')
-                        self.nb_maj += 1
+                if self.disable_mod_dev == 'false' or mod_prerelease_value.prerelease is None:
+                    # On récupère les version du jeu nécessaire pour le mod (cad la version la plus basse necessaire)
+                    mod_game_versions = resp_dict['mod']['releases'][0]['tags']
+                    first_min_ver = None
+                    for ver in mod_game_versions:
+                        first_min_ver = ver.split('v', 1)[1]
+                    result_compversion_local = self.compversion_local(self.version_locale, self.mod_last_version_online)  # (version locale, version online)
+                    # On compare la version max souhaité à la version necessaire pour le mod
+                    result_game_compare_version = self.compversion_first_min_version(self.gamever_limit, first_min_ver)  # (version locale, version online,)
+                    if result_game_compare_version == -1 or result_game_compare_version == 0:  # On met à jour
+                        if result_compversion_local == -1 or (result_compversion_local == 0 and self.force_update.lower() == 'true'):
+                            dl_link = f'{LanguageChoice().url_mods}{mod_file_onlinepath}'
+                            resp = requests.get(str(dl_link), stream=True, timeout=2)
+                            file_size = int(resp.headers.get("Content-length"))
+                            file_size_mo = round(file_size / (1024 ** 2), 2)
+                            print(f'\t{LanguageChoice().compver3} : {file_size_mo} {LanguageChoice().compver3a}')
+                            print(f'\t[green] {modname_value} v.{self.mod_last_version_online}[/green] {LanguageChoice().compver4}')
+                            try:
+                                os.remove(filename_value)
+                            except PermissionError:
+                                print(f'[red]{LanguageChoice().error_msg}[/red]')
+                                msg_error = f'{filename_value} :\n\n\t {traceback.format_exc()}'
+                                write_log(msg_error)
+                                sys.exit()
+                            wget.download(dl_link, str(self.path_mods))  # debug
+                            self.Path_Changelog = f'https://mods.vintagestory.at/show/mod/{mod_asset_id}#tab-files'
+                            log_txt = self.get_changelog(self.Path_Changelog)  # On récupère le changelog
+                            content_lst_mods_updated = [
+                                self.version_locale,
+                                self.mod_last_version_online,
+                                log_txt
+                            ]
+                            self.mods_updated[modname_value] = content_lst_mods_updated
+                            print('\n')
+                            self.nb_maj += 1
+            except requests.exceptions.ReadTimeout:
+                write_log('ReadTimeout error: Server did not respond within the specified timeout.')
             except urllib.error.URLError as err_url:
                 # Affiche de l'erreur si le lien n'est pas valide
                 print(f'[red]{LanguageChoice().error_msg}[/red]')
                 msg_error = f'{err_url.reason} : {modname_value}'
                 write_log(msg_error)
-            except KeyError:
-                print(f'[green] {modname_value}[/green]: [red]{LanguageChoice().error} !!! {LanguageChoice().error_modid}[/red]')
             except Exception:
-                print(f'[green] {modname_value}[/green]: [red]{LanguageChoice().error} !!! {LanguageChoice().error_modid}[/red]')
-                msg = f'Error with modid: {modname_value}\n{traceback.format_exc()}'
+                msg = f'{modname_value}\n{traceback.format_exc()}'
                 write_log(msg)
 
     def resume(self):
@@ -765,7 +776,7 @@ class GetInfo:
         req = urllib.request.Request(url)
         try:
             urllib.request.urlopen(req)  # On teste l'existence du lien
-            req_page = requests.get(url)
+            req_page = requests.get(url, timeout=2)
             resp_dict = req_page.json()
             mod_asset_id = str(resp_dict['mod']['assetid'])
             mod_urlalias = str(resp_dict['mod']['urlalias'])
@@ -774,6 +785,8 @@ class GetInfo:
             else:
                 self.test_url_mod = f'https://mods.vintagestory.at/{mod_urlalias}'
             return self.test_url_mod
+        except requests.exceptions.ReadTimeout:
+            write_log('ReadTimeout error: Server did not respond within the specified timeout.')
         except urllib.error.URLError as err_url:
             # Affiche de l'erreur si le lien n'est pas valide
             print(f'[red]{LanguageChoice().error_msg}[/red]')
@@ -865,6 +878,7 @@ argParser.add_argument("--nopause", help="Disable the pause at the end of the sc
 argParser.add_argument("--exclusion", help="Write filenames of mods with extension (in quotes) you want to exclude (each mod separated by space).", nargs="+")
 argParser.add_argument("--forceupdate", help="Force ModsUpdater to download the latest versions for ALL the mods (default=false).", choices=['false', 'true'], type=str.lower, required=False, default='false')
 argParser.add_argument("--makepdf", help="Create,at the end of the Update, a PDF file of all mods in the mods folder (default=false).", choices=['false', 'true'], type=str.lower, required=False, default='false')
+argParser.add_argument("--disable_mod_dev", help="enable or disable the update of mods in dev or prerelease (true/false default=false)", choices=['false', 'true'], type=str.lower, required=False)
 args = argParser.parse_args()
 # Fin des arguments
 
