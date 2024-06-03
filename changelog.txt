@@ -1,3 +1,8 @@
+v1.4.1
+- fixed: in some rare cases, when modID was not in the modinfo.json, mod was not update.
+- fixed: crash when there is a mod in the mods folder which is not on modDB
+- updated: DE lang file (by Zetabite)
+
 v1.4.0
 - Added: Option in config.ini and argument to exclude -dev version of mods from updating process.
 

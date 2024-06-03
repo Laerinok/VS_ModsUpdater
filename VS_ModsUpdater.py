@@ -12,8 +12,8 @@ Vintage Story mod management:
 - Possibility of generating a pdf file of the mod list
 """
 __author__ = "Laerinok"
-__date__ = "2023-03-29"
-__version__ = "1.4.0"
+__date__ = "2024-06-02"
+__version__ = "1.4.1"
 
 import argparse
 import configparser
@@ -300,6 +300,7 @@ class VSUpdate:
         self.Path_Changelog = ''
         # config_file
         self.exclusion_size = None
+        self.mod_offline2 = False
 
     def set_config_ini(self):
         # Création du config.ini si inexistant
@@ -370,6 +371,7 @@ class VSUpdate:
                 with zipfile.ZipFile(self.filepath) as fichier_zip:
                     with fichier_zip.open('modinfo.json') as modinfo_json:
                         self.modinfo_content = modinfo_json.read().decode('utf-8-sig')
+            # noinspection PyBroadException
             try:
                 regex_name = r'"{0,1}name"{0,1} {0,}: {0,}"(.*)",{0,}'
                 result_name = re.search(regex_name, self.modinfo_content, flags=re.IGNORECASE)
@@ -383,13 +385,14 @@ class VSUpdate:
                 if result_modid is not None:
                     mod_modid = result_modid.group(1)
                 else:
-                    mod_modid = mod_name.replace(" ", "").lower()
+                    mod_modid = re.sub(r'\W', '', mod_name).lower()
                 mod_version = result_version.group(1)
                 if result_description is not None:
                     mod_description = result_description.group(1)
                 else:
                     mod_description = ''
             except Exception:
+                # noinspection PyBroadException
                 try:
                     json_correct = self.json_correction(self.modinfo_content)
                     mod_name = json_correct[0]
@@ -466,6 +469,7 @@ class VSUpdate:
     # Pour comparer la version locale et online
     def compversion_local(ver_loc, ver_online):  # (version locale, version online)
         compver = ''
+        # noinspection PyBroadException
         try:
             compver = semver.compare(ver_loc, ver_online)
         except Exception:
@@ -476,6 +480,7 @@ class VSUpdate:
     # Pour comparer avec la version minimal nécessaire du jeu
     def compversion_first_min_version(ver_locale, first_min_ver):
         compver = ''
+        # noinspection PyBroadException
         try:
             ver = VSUpdate.verif_formatversion(first_min_ver, ver_locale)
             compver = semver.compare(ver[0], ver[1])
@@ -599,57 +604,64 @@ class VSUpdate:
             modname_value = self.extract_modinfo(mod_maj)[0]
             self.version_locale = self.extract_modinfo(mod_maj)[2]
             modid_value = self.extract_modinfo(mod_maj)[1]
-            if modid_value == '':
-                modid_value = re.sub(r'\s', '', modname_value).lower()
             filename_value = self.extract_modinfo(mod_maj)[4]
             mod_url_api = f'{self.url_api}{modid_value}'
             # On teste la validité du lien url
             req = urllib.request.Request(str(mod_url_api))
+            # noinspection PyBroadException
             try:
                 urllib.request.urlopen(req)  # On teste l'existence du lien
                 req_page = requests.get(str(mod_url_api), timeout=2)
                 resp_dict = req_page.json()
-                mod_asset_id = (resp_dict['mod']['assetid'])
-                self.mod_last_version_online = (resp_dict['mod']['releases'][0]['modversion'])
-                mod_file_onlinepath = (resp_dict['mod']['releases'][0]['mainfile'])
-                mod_prerelease_value = semver.Version.parse(self.mod_last_version_online)
-                # compare les versions des mods
-                print(f' [green]{modname_value[0].upper()}{modname_value[1:]}[/green]: {LanguageChoice().compver1} : {self.version_locale} - {LanguageChoice().compver2} : {self.mod_last_version_online}')
-                if self.disable_mod_dev == 'false' or mod_prerelease_value.prerelease is None:
-                    # On récupère les version du jeu nécessaire pour le mod (cad la version la plus basse necessaire)
-                    mod_game_versions = resp_dict['mod']['releases'][0]['tags']
-                    first_min_ver = None
-                    for ver in mod_game_versions:
-                        first_min_ver = ver.split('v', 1)[1]
-                    result_compversion_local = self.compversion_local(self.version_locale, self.mod_last_version_online)  # (version locale, version online)
-                    # On compare la version max souhaité à la version necessaire pour le mod
-                    result_game_compare_version = self.compversion_first_min_version(self.gamever_limit, first_min_ver)  # (version locale, version online,)
-                    if result_game_compare_version == -1 or result_game_compare_version == 0:  # On met à jour
-                        if result_compversion_local == -1 or (result_compversion_local == 0 and self.force_update.lower() == 'true'):
-                            dl_link = f'{LanguageChoice().url_mods}{mod_file_onlinepath}'
-                            resp = requests.get(str(dl_link), stream=True, timeout=2)
-                            file_size = int(resp.headers.get("Content-length"))
-                            file_size_mo = round(file_size / (1024 ** 2), 2)
-                            print(f'\t{LanguageChoice().compver3} : {file_size_mo} {LanguageChoice().compver3a}')
-                            print(f'\t[green] {modname_value} v.{self.mod_last_version_online}[/green] {LanguageChoice().compver4}')
-                            try:
-                                os.remove(filename_value)
-                            except PermissionError:
-                                print(f'[red]{LanguageChoice().error_msg}[/red]')
-                                msg_error = f'{filename_value} :\n\n\t {traceback.format_exc()}'
-                                write_log(msg_error)
-                                sys.exit()
-                            wget.download(dl_link, str(self.path_mods))  # debug
-                            self.Path_Changelog = f'https://mods.vintagestory.at/show/mod/{mod_asset_id}#tab-files'
-                            log_txt = self.get_changelog(self.Path_Changelog)  # On récupère le changelog
-                            content_lst_mods_updated = [
-                                self.version_locale,
-                                self.mod_last_version_online,
-                                log_txt
-                            ]
-                            self.mods_updated[modname_value] = content_lst_mods_updated
-                            print('\n')
-                            self.nb_maj += 1
+                statuscode = resp_dict['statuscode']
+                if statuscode == '200':
+                    mod_asset_id = (resp_dict['mod']['assetid'])
+                    mod_offline = True
+                    self.mod_last_version_online = (resp_dict['mod']['releases'][0]['modversion'])
+                    mod_file_onlinepath = (resp_dict['mod']['releases'][0]['mainfile'])
+                    mod_prerelease_value = semver.Version.parse(self.mod_last_version_online)
+                    # compare les versions des mods
+                    print(f' [green]{modname_value[0].upper()}{modname_value[1:]}[/green]: {LanguageChoice().compver1} : {self.version_locale} - {LanguageChoice().compver2} : {self.mod_last_version_online}')
+                    if self.disable_mod_dev == 'false' or mod_prerelease_value.prerelease is None:
+                        # On récupère les version du jeu nécessaire pour le mod (cad la version la plus basse necessaire)
+                        mod_game_versions = resp_dict['mod']['releases'][0]['tags']
+                        first_min_ver = None
+                        for ver in mod_game_versions:
+                            first_min_ver = ver.split('v', 1)[1]
+                        result_compversion_local = self.compversion_local(self.version_locale, self.mod_last_version_online)  # (version locale, version online)
+                        # On compare la version max souhaité à la version necessaire pour le mod
+                        result_game_compare_version = self.compversion_first_min_version(self.gamever_limit, first_min_ver)  # (version locale, version online,)
+                        if result_game_compare_version == -1 or result_game_compare_version == 0:  # On met à jour
+                            if result_compversion_local == -1 or (result_compversion_local == 0 and self.force_update.lower() == 'true'):
+                                dl_link = f'{LanguageChoice().url_mods}{mod_file_onlinepath}'
+                                resp = requests.get(str(dl_link), stream=True, timeout=2)
+                                file_size = int(resp.headers.get("Content-length"))
+                                file_size_mo = round(file_size / (1024 ** 2), 2)
+                                if mod_offline:
+                                    print(f'\t[green] {modname_value} not in ModDB')
+                                else:
+                                    print(f'\t{LanguageChoice().compver3} : {file_size_mo} {LanguageChoice().compver3a}')
+                                    print(f'\t[green] {modname_value} v.{self.mod_last_version_online}[/green] {LanguageChoice().compver4}')
+                                    try:
+                                        os.remove(filename_value)
+                                    except PermissionError:
+                                        print(f'[red]{LanguageChoice().error_msg}[/red]')
+                                        msg_error = f'{filename_value} :\n\n\t {traceback.format_exc()}'
+                                        write_log(msg_error)
+                                        sys.exit()
+                                    wget.download(dl_link, str(self.path_mods))  # debug
+                                    self.Path_Changelog = f'https://mods.vintagestory.at/show/mod/{mod_asset_id}#tab-files'
+                                    log_txt = self.get_changelog(self.Path_Changelog)  # On récupère le changelog
+                                    content_lst_mods_updated = [
+                                        self.version_locale,
+                                        self.mod_last_version_online,
+                                        log_txt
+                                    ]
+                                    self.mods_updated[modname_value] = content_lst_mods_updated
+                                    print('\n')
+                                    self.nb_maj += 1
+                else:
+                    print(f'[green] {modname_value} [/green]: Not in modDB')
             except requests.exceptions.ReadTimeout:
                 write_log('ReadTimeout error: Server did not respond within the specified timeout.')
             except urllib.error.URLError as err_url:
@@ -743,6 +755,7 @@ class GetInfo:
         self.mod_id = mod_id
         self.modinfo_content = None
         self.test_url_mod = ''
+        self.mod_offline = False
 
     def get_infos(self):
         # extraction modicon.png et renommage avec modid
@@ -778,12 +791,21 @@ class GetInfo:
             urllib.request.urlopen(req)  # On teste l'existence du lien
             req_page = requests.get(url, timeout=2)
             resp_dict = req_page.json()
-            mod_asset_id = str(resp_dict['mod']['assetid'])
-            mod_urlalias = str(resp_dict['mod']['urlalias'])
-            if mod_urlalias == 'None':
-                self.test_url_mod = f'https://mods.vintagestory.at/show/mod/{mod_asset_id}'
+            mod_asset_id = ''
+            # noinspection PyBroadException
+            try:
+                mod_asset_id = str(resp_dict['mod']['assetid'])
+            except Exception:
+                self.mod_offline = True
+                self.test_url_mod = ''
+            if not self.mod_offline:
+                mod_urlalias = str(resp_dict['mod']['urlalias'])
+                if mod_urlalias == 'None':
+                    self.test_url_mod = f'https://mods.vintagestory.at/show/mod/{mod_asset_id}'
+                else:
+                    self.test_url_mod = f'https://mods.vintagestory.at/{mod_urlalias}'
             else:
-                self.test_url_mod = f'https://mods.vintagestory.at/{mod_urlalias}'
+                pass
             return self.test_url_mod
         except requests.exceptions.ReadTimeout:
             write_log('ReadTimeout error: Server did not respond within the specified timeout.')
@@ -812,6 +834,7 @@ class MakePdf:
         self.csvfile = Path('temp', 'csvtemp.csv')
 
     def makepdf(self):
+        # noinspection PyBroadException
         try:
             # On crée le pdf
             monpdf = FPDF('P', 'mm', 'A4')
@@ -883,6 +906,7 @@ args = argParser.parse_args()
 # Fin des arguments
 
 # Test si il existe un fichier langue. (english par defaut)
+# noinspection PyBroadException
 try:
     lang = LanguageChoice()
 except Exception:
