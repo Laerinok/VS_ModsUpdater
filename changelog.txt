@@ -1,7 +1,9 @@
-v1.4.1
+v1.5.0
+- new feature : you can choose auto or manual mode to download mods
 - fixed: in some rare cases, when modID was not in the modinfo.json, mod was not update.
-- fixed: crash when there is a mod in the mods folder which is not on modDB
+- fixed: error/crash when there is a mod in the mods folder which is not on modDB
 - updated: DE lang file (by Zetabite)
+- some minor fixes
 
 v1.4.0
 - Added: Option in config.ini and argument to exclude -dev version of mods from updating process.
