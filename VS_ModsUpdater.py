@@ -47,12 +47,26 @@ from tqdm import tqdm
 
 # Creation of a logfile
 def write_log(info_crash):
-    print(f'An error occured. Please see the debug-log file in logs folder for more information.')
+    print(f'\n[red]An error occured. Please see the debug-log file in logs folder for more information.[/red]\n')
     if not Path('logs').is_dir():
         os.mkdir('logs')
     log_path = Path('logs').joinpath(f'debug-log-{dt.datetime.today().strftime("%Y%m%d%H%M%S")}.txt')
     with open(log_path, 'a', encoding='UTF-8') as crashlog_file:
         crashlog_file.write(f'{dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S")} : {info_crash}\n')
+
+
+# config.ini error
+def config_error(config_error_msg):
+    print(f'\n[red]ERROR in config.ini file. {config_error_msg}[/red]')
+    print(f'\nA key is missing. You probably use an old config.ini file')
+    print('Please, delete the config.ini and let the script create a new one.')
+    print('Exit...')
+    if not Path('logs').is_dir():
+        os.mkdir('logs')
+    log_path = Path('logs').joinpath(f'debug-log-{dt.datetime.today().strftime("%Y%m%d%H%M%S")}.txt')
+    with open(log_path, 'a', encoding='UTF-8') as crashlog_file:
+        crashlog_file.write(f'{dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S")} : {config_error_msg} in config.ini.\n')
+    sys.exit()
 
 
 class LanguageChoice:
@@ -271,19 +285,26 @@ class VSUpdate:
         self.modename = None
         self.nb_maj = 0
         self.gamever_limit = self.config_read.get('Game_Version_max', 'version')  # On récupère la version max du jeu pour la maj
-        if args.forceupdate:  # On récupère la valeur de force_update
-            self.force_update = args.forceupdate
-        else:
-            self.force_update = self.config_read.get('ModsUpdater', 'force_update')
-        if args.disable_mod_dev:
-            self.disable_mod_dev = args.disable_mod_dev
-        else:
-            self.disable_mod_dev = self.config_read.get('ModsUpdater', 'disable_mod_dev')
-        if args.auto_update:
-            self.auto_update = args.auto_update
-            self.auto_update.capitalize()
-        else:
-            self.auto_update = self.config_read.get('ModsUpdater', 'auto_update').capitalize()
+        try:
+            # On récupère les arguments fournis par arg sinon on recupère via config.ini
+            # forceupdate
+            if args.forceupdate:
+                self.force_update = args.forceupdate
+            else:
+                self.force_update = self.config_read.get('ModsUpdater', 'force_update')
+            # disable_mod_dev
+            if args.disable_mod_dev:
+                self.disable_mod_dev = args.disable_mod_dev
+            else:
+                self.disable_mod_dev = self.config_read.get('ModsUpdater', 'disable_mod_dev')
+            # auto_update
+            if args.auto_update:
+                self.auto_update = args.auto_update
+                self.auto_update.capitalize()
+            else:
+                self.auto_update = self.config_read.get('ModsUpdater', 'auto_update').capitalize()
+        except configparser.NoOptionError as err:
+            config_error(err)
         self.modinfo_content = None
         self.version_locale = ''
         self.mod_last_version_online = ''
@@ -313,6 +334,7 @@ class VSUpdate:
         self.path_file_to_remove = ''
         self.filename_value = ''
         self.modname_value = ''
+        self.modid_name = ''
         # config_file
         self.exclusion_size = None
         self.mod_offline2 = False
@@ -517,7 +539,7 @@ class VSUpdate:
         # Scrap pour recuperer le changelog
         req_url = urllib.request.Request(url)
         log = {}
-        lst_log_desc = ['test', 'test 2']
+        raw_log = {}
         try:
             urllib.request.urlopen(req_url)
             req_page_url = requests.get(url, timeout=2)
@@ -526,8 +548,9 @@ class VSUpdate:
             soup_raw_changelog = soup.find("div", {"class": "changelogtext"})
             # log version
             log_version = soup_raw_changelog.find('strong').text
-
-            log[log_version] = lst_log_desc
+            # log content
+            raw_log[log_version] = soup_raw_changelog.text
+            log[log_version] = raw_log[log_version].replace('\n', '\n\t\t').lstrip('\n')
         except requests.exceptions.ReadTimeout:
             write_log('ReadTimeout error: Server did not respond within the specified timeout.')
         except urllib.error.URLError as err_url:
@@ -538,7 +561,7 @@ class VSUpdate:
         return log
 
     @staticmethod
-    def get_changelog_bak(url):
+    def get_changelog_bak(url):  # A effacer quand OK
         # Scrap pour recuperer le changelog
         req_url = urllib.request.Request(url)
         log = {}
@@ -654,8 +677,8 @@ class VSUpdate:
         for mod_to_check in tqdm(self.mods_to_check, desc="Recherche de mises à jour", bar_format="{l_bar}{bar:50}{r_bar}"):
             self.version_locale = self.extract_modinfo(mod_to_check)[2]
             local_path_mod = self.extract_modinfo(mod_to_check)[4]
-            modid_value = self.extract_modinfo(mod_to_check)[1]
-            mod_url_api = f'{self.url_api}{modid_value}'
+            self.modid_name = self.extract_modinfo(mod_to_check)[1]
+            mod_url_api = f'{self.url_api}{self.modid_name}'
             req = urllib.request.Request(str(mod_url_api))
             # noinspection PyBroadException
             try:
@@ -686,7 +709,8 @@ class VSUpdate:
                                 self.mod_last_version_online,
                                 self.mod_file_onlinepath,
                                 log_content,
-                                local_path_mod
+                                local_path_mod,
+                                self.path_changelog
                             ]
                             self.mods_to_update[self.modname_value] = content_lst_mods_updated
 
@@ -714,26 +738,24 @@ class VSUpdate:
         log_path = Path(self.path_logs, log_filename)
         with open(log_path, 'w', encoding='utf-8-sig') as logfile:
             logfile.write(f'\n\t\t\tMods Vintage Story - {LanguageChoice().last_update} : {dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S")}\n\n')
-            for modname, value in self.mods_to_update.items():
+            for modname, log_content in self.mods_to_update.items():
                 dl_link = f'{self.url_base_mod}{self.mods_to_update[modname][2]}'
-                local_version = value[0]
-                online_last_version = value[1]
-                url_download = f'{self.url_base_mod}{value[2]}'
-                local_mod_path = value[4]
-                for log_version, log_txt in value[3].items():
-                    print(f'\n * [green]{modname}[/green]')
-                    print(f'\t[bold][yellow]Changelog {log_version} :[/yellow][/bold]')
-                    for line in log_txt:
-                        print(f'\t\t[yellow]- {line}[/yellow]')
+                local_version = log_content[0]
+                online_last_version = log_content[1]
+                url_download = f'{self.url_base_mod}{log_content[2]}'
+                local_mod_path = log_content[4]
+                print(f'\n * [green]{modname}[/green]')
+                print(f'\t[bold][yellow]Changelog {online_last_version} :[/yellow][/bold]')
+                print(log_content[3][f'v{online_last_version}'])
+                # ask for downloading
                 dl_mod_reponse = Prompt.ask('Télécharger le mod ?', choices=[LanguageChoice().list_yesno[0], LanguageChoice().list_yesno[1], LanguageChoice().list_yesno[2], LanguageChoice().list_yesno[3]])
                 if dl_mod_reponse == LanguageChoice().list_yesno[0] or dl_mod_reponse == LanguageChoice().list_yesno[2]:
-                    logfile.write(f'\n\n- {modname} : v{local_version} -> v{online_last_version} ({url_download}) :\n')  # affiche en plus l'url du mod
-                    for log_version, log_txt in value[3].items():
-                        logfile.write(f'\tChangelog {log_version} :\n')
-                        for line in log_txt:
-                            logfile.write(f'\t\t- {line}\n')
+                    logfile.write(f'\n\n- {modname} : v{local_version} -> v{online_last_version} ({log_content[5]}) :\n')  # affiche en plus l'url du mod
+                    logfile.write(f'\tChangelog {online_last_version} :\n')
+                    logfile.write(log_content[3][f'v{online_last_version}'])
                     try:
-                        os.remove(local_mod_path)
+                        # os.remove(local_mod_path)
+                        pass
                     except PermissionError:
                         print(f'[red]{LanguageChoice().error_msg}[/red]')
                         msg_error = f'{local_mod_path} :\n\n\t {traceback.format_exc()}'
@@ -743,7 +765,7 @@ class VSUpdate:
                         msg_error = f'{local_mod_path} :\n\n\t {traceback.format_exc()}'
                         write_log(msg_error)
                         sys.exit()
-                    wget.download(dl_link, str(self.path_mods))
+                    # wget.download(dl_link, str(self.path_mods))
 
     def mods_auto_update(self):
         # On procède à la maj
@@ -787,24 +809,16 @@ class VSUpdate:
             os.mkdir('logs')
         log_path = Path(self.path_logs, log_filename)
         with open(log_path, 'w', encoding='utf-8-sig') as logfile:
-            logfile.write(
-                f'\n\t\t\tMods Vintage Story - {LanguageChoice().last_update} : {dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S")}\n\n')
-            for modname, value in self.mods_to_update.items():
-                local_version = value[0]
-                online_last_version = value[1]
-                url_download = f'{self.url_base_mod}{value[2]}'
+            logfile.write(f'\n\t\t\tMods Vintage Story - {LanguageChoice().last_update} : {dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S")}\n\n')
+            for modname, log_content in self.mods_to_update.items():
+                local_version = log_content[0]
+                online_last_version = log_content[1]
                 print(f' * [green]{modname} (v{local_version}->v{online_last_version}) :[/green]')
-                logfile.write(
-                    f'\n\n- {modname} : v{local_version} -> v{online_last_version} ({url_download}) :\n')  # affiche en plus l'url du mod
-                for log_version, log_txt in value[3].items():
-                    if log_version != 'url':
-                        print(f'\t[bold][yellow]Changelog {log_version} :[/yellow][/bold]')
-                        logfile.write(f'\tChangelog {log_version} :\n')
-                        for line in log_txt:
-                            print(f'\t\t[yellow]- {line}[/yellow]')
-                            logfile.write(f'\t\t- {line}\n')
-
-        print(self.mods_exclu)  # debug
+                logfile.write(f'\n\n- {modname} : v{local_version} -> v{online_last_version} ({log_content[5]}) :\n')  # affiche en plus l'url du mod
+                print(f'\t[bold][yellow]Changelog {online_last_version} :[/yellow][/bold]')
+                print(log_content[3][f'v{online_last_version}'])
+                logfile.write(f'\tChangelog {online_last_version} :\n')
+                logfile.write(log_content[3][f'v{online_last_version}'])
 
         if len(self.mods_exclu) == 1:
             modinfo_values = self.extract_modinfo(self.mods_exclu[0])
@@ -815,7 +829,7 @@ class VSUpdate:
             for k in range(0, len(self.mods_exclu)-1):
                 print(f'k:{k} len:{len(self.mods_exclu)}')  # debug
                 # On appelle la fonction pour extraire modinfo.json
-                modinfo_values = self.extract_modinfo(self.mods_exclu[k])
+                # modinfo_values = self.extract_modinfo(self.mods_exclu[k])
                 # print(modinfo_values)  # debug
                 # if self.mods_exclu[k] in self.mod_filename:
                 #    print(self.mods_exclu[k])  # debug
