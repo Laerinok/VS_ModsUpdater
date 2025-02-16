@@ -12,7 +12,7 @@ set modspath=C:\Users\USERNAME\AppData\Roaming\VintagestoryData\Mods
 rem Language of the script. same name than the file in the 'lang'directory of VS_ModsUpdater
 set language=fr_FR
 rem enable or disable the force_update (true/false)
-set force_update=true
+set force_update=false
 rem ************************************************************************************************
 
 start /B /wait /D "%VS_ModsUpdaterPath%" VS_ModsUpdater.exe --modspath "%modspath%" --language "%language%" --nopause true --force_update %force_update%

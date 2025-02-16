@@ -12,8 +12,8 @@ Vintage Story mod management:
 - Possibility of generating a pdf file of the mod list
 """
 __author__ = "Laerinok"
-__date__ = "2023-03-29"
-__version__ = "1.4.0"
+__date__ = "2025-02-16"
+__version__ = "1.4.1"
 
 import argparse
 import configparser
@@ -46,12 +46,15 @@ from rich.prompt import Prompt
 
 # Creation of a logfile
 def write_log(info_crash):
-    print(f'An error occured. Please see the debug-log file in logs folder for more information.')
+    print(
+        f'An error occured. Please see the debug-log file in logs folder for more information.')
     if not Path('logs').is_dir():
         os.mkdir('logs')
-    log_path = Path('logs').joinpath(f'debug-log-{dt.datetime.today().strftime("%Y%m%d%H%M%S")}.txt')
+    log_path = Path('logs').joinpath(
+        f'debug-log-{dt.datetime.today().strftime("%Y%m%d%H%M%S")}.txt')
     with open(log_path, 'a', encoding='UTF-8') as crashlog_file:
-        crashlog_file.write(f'{dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S")} : {info_crash}\n')
+        crashlog_file.write(
+            f'{dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S")} : {info_crash}\n')
 
 
 class LanguageChoice:
@@ -60,7 +63,8 @@ class LanguageChoice:
         self.path_lang = Path("lang")
         # Si on définit manuellement la langue via le fichier config
         self.config_file = Path('config.ini')
-        self.config_read = configparser.ConfigParser(allow_no_value=True, interpolation=None)
+        self.config_read = configparser.ConfigParser(allow_no_value=True,
+                                                     interpolation=None)
         self.config_read.read(self.config_file, encoding='utf-8-sig')
         # On vérifie si args.language existe
         if args.language:
@@ -75,7 +79,8 @@ class LanguageChoice:
                 self.lang = 'en_US.json'
         self.file_lang_path = Path(self.path_lang, self.lang)
         if not self.file_lang_path.is_file():
-            self.file_lang_path = Path(self.path_lang, 'en_US.json')  # on charge en.json si aucun fichier de langue n'est présent
+            self.file_lang_path = Path(self.path_lang,
+                                       'en_US.json')  # on charge en.json si aucun fichier de langue n'est présent
         # On charge le fichier de langue
         with open(self.file_lang_path, "r", encoding='utf-8-sig') as lang_json:
             desc = json.load(lang_json)
@@ -125,7 +130,8 @@ class LanguageChoice:
             self.error_msg = desc['error_msg']
 
         # On crée une liste pour les réponses O/N
-        self.list_yesno = [self.yes.lower(), self.no.lower(), self.yes[0].lower(), self.no[0].lower()]
+        self.list_yesno = [self.yes.lower(), self.no.lower(), self.yes[0].lower(),
+                           self.no[0].lower()]
         # Dico pour les langues - Region, langue-abr, langue, index
         self.dic_lang = {
             "DE": ["de", "Deutsch", '1'],
@@ -164,7 +170,8 @@ class MajScript:
             soup_link_prg = soup.find("a", {"class": "downloadbutton"})
             # on recupere la version du chanlog
             regexp_online_ver_modsupdater = '<strong>v(.*)</strong>'
-            online_ver_modsupdater = re.search(regexp_online_ver_modsupdater, str(soup_changelog))
+            online_ver_modsupdater = re.search(regexp_online_ver_modsupdater,
+                                               str(soup_changelog))
             # On compare les versions
             result = VSUpdate.compversion_local(__version__, online_ver_modsupdater[1])
             if result == -1:
@@ -174,7 +181,8 @@ class MajScript:
                 for line in lines_update:
                     print(f'{line.center(column)}')
         except requests.exceptions.ReadTimeout:
-            write_log('ReadTimeout error: Server did not respond within the specified timeout.')
+            write_log(
+                'ReadTimeout error: Server did not respond within the specified timeout.')
         except urllib.error.URLError as err_url:
             # Affiche de l'erreur si le lien n'est pas valide
             print(f'[red]{LanguageChoice().error_msg}[/red]')
@@ -201,13 +209,17 @@ class VSUpdate:
         # On crée le fichier config.ini si inexistant, puis (si lancement du script via l'executable et non en ligne de commande) on sort du programme si on veut ajouter des mods à exclure
         if not self.config_file.is_file():
             if args.nopause == 'false':
-                print(f'\n\t\t[bold cyan]{LanguageChoice().first_launch_title}[/bold cyan]\n')
+                print(
+                    f'\n\t\t[bold cyan]{LanguageChoice().first_launch_title}[/bold cyan]\n')
                 i = 1
                 for lan_2L, item in LanguageChoice().dic_lang.items():
                     print(f'\t\t - {i}) {item[1]}, {item[0]}')
                     i += 1
             if args.nopause == 'false':
-                lang_choice_result = Prompt.ask(f'\n\t\t[bold cyan]{LanguageChoice().first_launch_lang_choice}[/bold cyan]', choices=['1', '2', '3', '4', '5', '6', '7', '8'], show_choices=False, default='2')
+                lang_choice_result = Prompt.ask(
+                    f'\n\t\t[bold cyan]{LanguageChoice().first_launch_lang_choice}[/bold cyan]',
+                    choices=['1', '2', '3', '4', '5', '6', '7', '8'],
+                    show_choices=False, default='2')
                 for region, lang_ext in LanguageChoice().dic_lang.items():
                     if lang_choice_result == lang_ext[2]:
                         self.file_lang_path = f'lang\{lang_ext[0]}_{region}.json'
@@ -225,21 +237,34 @@ class VSUpdate:
             # On crée le fichier config.ini
             self.set_config_ini()
             # On récupère les valeurs de config.ini
-            self.config_read = configparser.ConfigParser(allow_no_value=True, interpolation=None)
+            self.config_read = configparser.ConfigParser(allow_no_value=True,
+                                                         interpolation=None)
             self.config_read.read(self.config_file, encoding='utf-8-sig')
-            self.force_update = self.config_read.get('ModsUpdater', 'force_update')  # On récupère la valeur de force_update
-            self.disable_mod_dev = self.config_read.get('ModsUpdater', 'disable_mod_dev')  # On récupère l'option pour la maj ou non des version dev des mod.
-            print(f'\n\t[bold cyan]{LanguageChoice().first_launch_config_done}[/bold cyan] :')
-            print(f'\t\t- [bold cyan]{LanguageChoice().first_launch_lang_txt}[/bold cyan] : {self.lang_name}')
-            print(f'\t\t- [bold cyan]{LanguageChoice().first_launch_pathmods} : {self.path_mods}[/bold cyan]')
-            print(f'\t\t- [bold cyan]{LanguageChoice().first_launch_game_ver_max}[/bold cyan]')
+            self.force_update = self.config_read.get('ModsUpdater',
+                                                     'force_update')  # On récupère la valeur de force_update
+            self.disable_mod_dev = self.config_read.get('ModsUpdater',
+                                                        'disable_mod_dev')  # On récupère l'option pour la maj ou non des version dev des mod.
+            print(
+                f'\n\t[bold cyan]{LanguageChoice().first_launch_config_done}[/bold cyan] :')
+            print(
+                f'\t\t- [bold cyan]{LanguageChoice().first_launch_lang_txt}[/bold cyan] : {self.lang_name}')
+            print(
+                f'\t\t- [bold cyan]{LanguageChoice().first_launch_pathmods} : {self.path_mods}[/bold cyan]')
+            print(
+                f'\t\t- [bold cyan]{LanguageChoice().first_launch_game_ver_max}[/bold cyan]')
             print(f'\t\t- [bold cyan]force_Update : {self.force_update}[/bold cyan]')
-            print(f'\t\t- [bold cyan]disable_mod_dev : {self.disable_mod_dev}[/bold cyan]')
+            print(
+                f'\t\t- [bold cyan]disable_mod_dev : {self.disable_mod_dev}[/bold cyan]')
             # On demande de continuer ou on quitte
             if args.nopause == 'false':
                 print(f'\n\t[bold cyan]{LanguageChoice().first_launch2}[/bold cyan]')
-                maj_ok = Prompt.ask(f'\n\t{LanguageChoice().first_launch3}', choices=[LanguageChoice().list_yesno[0], LanguageChoice().list_yesno[1], LanguageChoice().list_yesno[2], LanguageChoice().list_yesno[3]])
-                if maj_ok == LanguageChoice().list_yesno[1] or maj_ok == LanguageChoice().list_yesno[3]:
+                maj_ok = Prompt.ask(f'\n\t{LanguageChoice().first_launch3}',
+                                    choices=[LanguageChoice().list_yesno[0],
+                                             LanguageChoice().list_yesno[1],
+                                             LanguageChoice().list_yesno[2],
+                                             LanguageChoice().list_yesno[3]])
+                if maj_ok == LanguageChoice().list_yesno[1] or maj_ok == \
+                        LanguageChoice().list_yesno[3]:
                     print(f'{lang.end_of_prg} ')
                     if Path('temp').is_dir():
                         shutil.rmtree('temp')
@@ -247,7 +272,8 @@ class VSUpdate:
                     sys.exit()
 
         # On charge le fichier config.ini
-        self.config_read = configparser.ConfigParser(allow_no_value=True, interpolation=None)
+        self.config_read = configparser.ConfigParser(allow_no_value=True,
+                                                     interpolation=None)
         self.config_read.read(self.config_file, encoding='utf-8-sig')
         if not args.modspath:
             self.config_path = Path(self.config_read.get('ModPath', 'path'))
@@ -266,7 +292,8 @@ class VSUpdate:
         # Définition des variables
         self.modename = None
         self.nb_maj = 0
-        self.gamever_limit = self.config_read.get('Game_Version_max', 'version')  # On récupère la version max du jeu pour la maj
+        self.gamever_limit = self.config_read.get('Game_Version_max',
+                                                  'version')  # On récupère la version max du jeu pour la maj
         if args.forceupdate:  # On récupère la valeur de force_update
             self.force_update = args.forceupdate
         else:
@@ -274,7 +301,8 @@ class VSUpdate:
         if args.disable_mod_dev:
             self.disable_mod_dev = args.disable_mod_dev
         else:
-            self.disable_mod_dev = self.config_read.get('ModsUpdater', 'disable_mod_dev')
+            self.disable_mod_dev = self.config_read.get('ModsUpdater',
+                                                        'disable_mod_dev')
         self.modinfo_content = None
         self.version_locale = ''
         self.mod_last_version_online = ''
@@ -298,6 +326,7 @@ class VSUpdate:
         self.version = ''
         # Update_mods
         self.Path_Changelog = ''
+        self.mods_to_check = []
         # config_file
         self.exclusion_size = None
 
@@ -309,12 +338,15 @@ class VSUpdate:
             mu_ver = __version__
             my_system = platform.system()
             config.add_section('ModsUpdater')
-            config.set('ModsUpdater', '# Info about the creation of the config.ini file')
+            config.set('ModsUpdater',
+                       '# Info about the creation of the config.ini file')
             config.set('ModsUpdater', 'ver', mu_ver)
             config.set('ModsUpdater', 'system', my_system)
-            config.set('ModsUpdater', '# Enable or disable Force_Update for every mods. If enabled, it will download the last version for ALL mods, even if the version is already the latest. (true/false default=false)')
+            config.set('ModsUpdater',
+                       '# Enable or disable Force_Update for every mods. If enabled, it will download the last version for ALL mods, even if the version is already the latest. (true/false default=false)')
             config.set('ModsUpdater', 'force_update', 'false')
-            config.set('ModsUpdater', '# Allow to disable or enable update of mod in dev or prerelease (true/false default=false).')
+            config.set('ModsUpdater',
+                       '# Allow to disable or enable update of mod in dev or prerelease (true/false default=false).')
             config.set('ModsUpdater', 'disable_mod_dev', 'false')
             config.add_section('ModPath')
             config.set('ModPath', 'path', str(self.path_mods))
@@ -334,7 +366,7 @@ class VSUpdate:
             config.set('Mod_Exclusion', LanguageChoice().setconfig)
             if args.exclusion:
                 for i in range(0, len(args.exclusion)):
-                    config.set('Mod_Exclusion', 'mod' + str(i+1), args.exclusion[i])
+                    config.set('Mod_Exclusion', 'mod' + str(i + 1), args.exclusion[i])
             else:
                 for i in range(1, 11):
                     config.set('Mod_Exclusion', 'mod' + str(i), '')
@@ -342,13 +374,17 @@ class VSUpdate:
 
     def json_correction(self, txt_json):
         self.regex_name_json = r'"{0,1}name"{0,1} {0,}: {0,}"(.*)",{0,}'
-        self.result_name_json = re.search(self.regex_name_json, txt_json, flags=re.IGNORECASE)
+        self.result_name_json = re.search(self.regex_name_json, txt_json,
+                                          flags=re.IGNORECASE)
         self.regex_version_json = r'"{0,1}version"{0,1} {0,}: {0,}"(.*)",{0,}'
-        self.result_version_json = re.search(self.regex_version_json, txt_json, flags=re.IGNORECASE)
+        self.result_version_json = re.search(self.regex_version_json, txt_json,
+                                             flags=re.IGNORECASE)
         self.regex_modid_json = r'"{0,1}modid"{0,1} {0,}: {0,}"(.*)",{0,}'
-        self.result_modid_json = re.search(self.regex_modid_json, txt_json, flags=re.IGNORECASE)
+        self.result_modid_json = re.search(self.regex_modid_json, txt_json,
+                                           flags=re.IGNORECASE)
         self.regex_moddesc_json = r'"{0,1}description"{0,1} {0,}: {0,}"(.*)",{0,}'
-        self.result_moddesc_json = re.search(self.regex_moddesc_json, txt_json, flags=re.IGNORECASE)
+        self.result_moddesc_json = re.search(self.regex_moddesc_json, txt_json,
+                                             flags=re.IGNORECASE)
         if self.result_name_json:
             self.name_json = self.result_name_json.group(2)
         if self.result_version_json:
@@ -357,7 +393,8 @@ class VSUpdate:
             self.modid_json = self.result_modid_json.group(2)
         if self.result_moddesc_json:
             self.moddesc_json = self.result_moddesc_json.group(2)
-        print(f'self.name_json:{self.name_json}\nself.version_json:{self.version_json}\nself.modid_json:{self.modid_json}\nself.moddesc_json:{self.moddesc_json}')
+        print(
+            f'self.name_json:{self.name_json}\nself.version_json:{self.version_json}\nself.modid_json:{self.modid_json}\nself.moddesc_json:{self.moddesc_json}')
         return self.name_json, self.version_json, self.modid_json, self.moddesc_json
 
     def extract_modinfo(self, file):
@@ -366,19 +403,24 @@ class VSUpdate:
         if type_file == '.zip':
             # On lit le fichier modinfo.json de l'archive et on recupere le modid, name et version
             self.filepath = Path(self.path_mods, file)
-            if zipfile.is_zipfile(self.filepath):  # Vérifie si fichier est un Zip valide
+            if zipfile.is_zipfile(
+                    self.filepath):  # Vérifie si fichier est un Zip valide
                 with zipfile.ZipFile(self.filepath) as fichier_zip:
                     with fichier_zip.open('modinfo.json') as modinfo_json:
                         self.modinfo_content = modinfo_json.read().decode('utf-8-sig')
             try:
                 regex_name = r'"{0,1}name"{0,1} {0,}: {0,}"(.*)",{0,}'
-                result_name = re.search(regex_name, self.modinfo_content, flags=re.IGNORECASE)
+                result_name = re.search(regex_name, self.modinfo_content,
+                                        flags=re.IGNORECASE)
                 regex_modid = r'"{0,1}modid"{0,1} {0,}: {0,}"(.*)",{0,}'
-                result_modid = re.search(regex_modid, self.modinfo_content, flags=re.IGNORECASE)
+                result_modid = re.search(regex_modid, self.modinfo_content,
+                                         flags=re.IGNORECASE)
                 regex_version = r'"{0,1}version"{0,1} {0,}: {0,}"(.*)",{0,}'
-                result_version = re.search(regex_version, self.modinfo_content, flags=re.IGNORECASE)
+                result_version = re.search(regex_version, self.modinfo_content,
+                                           flags=re.IGNORECASE)
                 regex_description = r'"{0,1}description"{0,1} {0,}: {0,}"(.*)",{0,}'
-                result_description = re.search(regex_description, self.modinfo_content, flags=re.IGNORECASE)
+                result_description = re.search(regex_description, self.modinfo_content,
+                                               flags=re.IGNORECASE)
                 mod_name = result_name.group(1)
                 if result_modid is not None:
                     mod_modid = result_modid.group(1)
@@ -415,7 +457,8 @@ class VSUpdate:
                 regexp_version = '(Version\s=\s\")([\d.]*)\"'
                 result_version = re.search(regexp_version, cs_file, flags=re.IGNORECASE)
                 regexp_description = 'Description = "(.*)",'
-                result_description = re.search(regexp_description, cs_file, flags=re.IGNORECASE)
+                result_description = re.search(regexp_description, cs_file,
+                                               flags=re.IGNORECASE)
                 mod_name = result_name[2]
                 mod_version = result_version[2]
                 mod_modid = mod_name
@@ -471,7 +514,7 @@ class VSUpdate:
         except Exception:
             write_log(traceback.format_exc())
         return compver
-    
+
     @staticmethod
     # Pour comparer avec la version minimal nécessaire du jeu
     def compversion_first_min_version(ver_locale, first_min_ver):
@@ -537,7 +580,8 @@ class VSUpdate:
             log[last_version] = lst_log_desc
             log['url'] = url
         except requests.exceptions.ReadTimeout:
-            write_log('ReadTimeout error: Server did not respond within the specified timeout.')
+            write_log(
+                'ReadTimeout error: Server did not respond within the specified timeout.')
         except urllib.error.URLError as err_url:
             # Affiche de l'erreur si le lien n'est pas valide
             print(f'[red]{LanguageChoice().error_msg}[/red]')
@@ -545,7 +589,8 @@ class VSUpdate:
             write_log(msg_error)
         return log
 
-    def accueil(self):  # le _ en debut permet de lever le message "Parameter 'net_version' value is not used
+    def accueil(
+            self):  # le _ en debut permet de lever le message "Parameter 'net_version' value is not used
         if self.gamever_limit == '100.0.0':
             self.version = LanguageChoice().version_max
         else:
@@ -583,18 +628,28 @@ class VSUpdate:
 
     def mods_list(self):
         # Création de la liste des mods à mettre à jour
-        # On retire les mods de la liste d'exclusion
+        # On retire les mods issus de la liste d'exclusion
         self.liste_mod_maj_filename = self.liste_complete_mods()
+        self.liste_mod_maj_filename.sort(key=lambda s: s.casefold())
         for modexclu in self.mods_exclu:
             if modexclu in self.liste_mod_maj_filename:
                 self.liste_mod_maj_filename.remove(modexclu)  # contient la liste des mods à mettre a jour avec les noms de fichier
-        for elem in self.liste_mod_maj_filename:
-            name = self.extract_modinfo(elem)[0]
-            self.mod_name_list.append(name[0])
+        # On vérifie si le mod est sur moddb
+        for mod_maj in self.liste_mod_maj_filename:
+            modid_value = self.extract_modinfo(mod_maj)[1]
+            mod_url_test = f'{self.url_api}{modid_value}'
+            req_page = requests.get(str(mod_url_test), timeout=2)
+            resp_dict = req_page.json()
+            statuscode = resp_dict['statuscode']
+            if statuscode == '200':
+                # on crée la liste des mods à vérifier
+                self.mods_to_check.append(mod_maj)
+            elif statuscode == '404':
+                # On ajoute les mods non présents sur moddb à la liste des exclusion
+                self.mods_exclu.append(mod_maj)
 
     def update_mods(self):
         # Comparaison et maj des mods
-        self.liste_mod_maj_filename.sort(key=lambda s: s.casefold())
         for mod_maj in self.liste_mod_maj_filename:
             modname_value = self.extract_modinfo(mod_maj)[0]
             self.version_locale = self.extract_modinfo(mod_maj)[2]
@@ -610,28 +665,38 @@ class VSUpdate:
                 req_page = requests.get(str(mod_url_api), timeout=2)
                 resp_dict = req_page.json()
                 mod_asset_id = (resp_dict['mod']['assetid'])
-                self.mod_last_version_online = (resp_dict['mod']['releases'][0]['modversion'])
+                self.mod_last_version_online = (
+                resp_dict['mod']['releases'][0]['modversion'])
                 mod_file_onlinepath = (resp_dict['mod']['releases'][0]['mainfile'])
-                mod_prerelease_value = semver.Version.parse(self.mod_last_version_online)
+                mod_prerelease_value = semver.Version.parse(
+                    self.mod_last_version_online)
                 # compare les versions des mods
-                print(f' [green]{modname_value[0].upper()}{modname_value[1:]}[/green]: {LanguageChoice().compver1} : {self.version_locale} - {LanguageChoice().compver2} : {self.mod_last_version_online}')
+                print(
+                    f' [green]{modname_value[0].upper()}{modname_value[1:]}[/green]: {LanguageChoice().compver1} : {self.version_locale} - {LanguageChoice().compver2} : {self.mod_last_version_online}')
                 if self.disable_mod_dev == 'false' or mod_prerelease_value.prerelease is None:
                     # On récupère les version du jeu nécessaire pour le mod (cad la version la plus basse necessaire)
                     mod_game_versions = resp_dict['mod']['releases'][0]['tags']
                     first_min_ver = None
                     for ver in mod_game_versions:
                         first_min_ver = ver.split('v', 1)[1]
-                    result_compversion_local = self.compversion_local(self.version_locale, self.mod_last_version_online)  # (version locale, version online)
+                    result_compversion_local = self.compversion_local(
+                        self.version_locale,
+                        self.mod_last_version_online)  # (version locale, version online)
                     # On compare la version max souhaité à la version necessaire pour le mod
-                    result_game_compare_version = self.compversion_first_min_version(self.gamever_limit, first_min_ver)  # (version locale, version online,)
+                    result_game_compare_version = self.compversion_first_min_version(
+                        self.gamever_limit,
+                        first_min_ver)  # (version locale, version online,)
                     if result_game_compare_version == -1 or result_game_compare_version == 0:  # On met à jour
-                        if result_compversion_local == -1 or (result_compversion_local == 0 and self.force_update.lower() == 'true'):
-                            dl_link = f'{LanguageChoice().url_mods}{mod_file_onlinepath}'
-                            resp = requests.get(str(dl_link), stream=True, timeout=2)
+                        if result_compversion_local == -1 or (
+                                result_compversion_local == 0 and self.force_update.lower() == 'true'):
+                            dl_link = f'{mod_file_onlinepath}'
+                            resp = requests.get(str(dl_link), stream=True, timeout=2, allow_redirects=False)
                             file_size = int(resp.headers.get("Content-length"))
                             file_size_mo = round(file_size / (1024 ** 2), 2)
-                            print(f'\t{LanguageChoice().compver3} : {file_size_mo} {LanguageChoice().compver3a}')
-                            print(f'\t[green] {modname_value} v.{self.mod_last_version_online}[/green] {LanguageChoice().compver4}')
+                            print(
+                                f'\t{LanguageChoice().compver3} : {file_size_mo} {LanguageChoice().compver3a}')
+                            print(
+                                f'\t[green] {modname_value} v.{self.mod_last_version_online}[/green] {LanguageChoice().compver4}')
                             try:
                                 os.remove(filename_value)
                             except PermissionError:
@@ -641,7 +706,8 @@ class VSUpdate:
                                 sys.exit()
                             wget.download(dl_link, str(self.path_mods))  # debug
                             self.Path_Changelog = f'https://mods.vintagestory.at/show/mod/{mod_asset_id}#tab-files'
-                            log_txt = self.get_changelog(self.Path_Changelog)  # On récupère le changelog
+                            log_txt = self.get_changelog(
+                                self.Path_Changelog)  # On récupère le changelog
                             content_lst_mods_updated = [
                                 self.version_locale,
                                 self.mod_last_version_online,
@@ -651,7 +717,8 @@ class VSUpdate:
                             print('\n')
                             self.nb_maj += 1
             except requests.exceptions.ReadTimeout:
-                write_log('ReadTimeout error: Server did not respond within the specified timeout.')
+                write_log(
+                    'ReadTimeout error: Server did not respond within the specified timeout.')
             except urllib.error.URLError as err_url:
                 # Affiche de l'erreur si le lien n'est pas valide
                 print(f'[red]{LanguageChoice().error_msg}[/red]')
@@ -671,15 +738,18 @@ class VSUpdate:
                 os.mkdir('logs')
             log_path = Path(self.path_logs, log_filename)
             with open(log_path, 'w', encoding='utf-8-sig') as logfile:
-                logfile.write(f'\n\t\t\tMods Vintage Story - {LanguageChoice().last_update} : {dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S")}\n\n')
+                logfile.write(
+                    f'\n\t\t\tMods Vintage Story - {LanguageChoice().last_update} : {dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S")}\n\n')
                 for modname, value in self.mods_updated.items():
                     local_version = value[0]
                     online_last_version = value[1]
                     print(f' * [green]{modname} :[/green]')
-                    logfile.write(f'\n\n- {modname} : v{local_version} -> v{online_last_version} ({value[2]["url"]}) :\n')  # affiche en plus l'url du mod
+                    logfile.write(
+                        f'\n\n- {modname} : v{local_version} -> v{online_last_version} ({value[2]["url"]}) :\n')  # affiche en plus l'url du mod
                     for log_version, log_txt in value[2].items():
                         if log_version != 'url':
-                            print(f'\t[bold][yellow]Changelog {log_version} :[/yellow][/bold]')
+                            print(
+                                f'\t[bold][yellow]Changelog {log_version} :[/yellow][/bold]')
                             logfile.write(f'\tChangelog {log_version} :\n')
                             for line in log_txt:
                                 print(f'\t\t[yellow]- {line}[/yellow]')
@@ -699,10 +769,12 @@ class VSUpdate:
                     local_version = value[0]
                     online_last_version = value[1]
                     print(f' * [green]{modname} :[/green]')
-                    logfile.write(f'\n\n- {modname} : v{local_version} -> v{online_last_version} ({value[2]["url"]}) :\n')  # affiche en plus l'url du mod
+                    logfile.write(
+                        f'\n\n- {modname} : v{local_version} -> v{online_last_version} ({value[2]["url"]}) :\n')  # affiche en plus l'url du mod
                     for log_version, log_txt in value[2].items():
                         if log_version != 'url':
-                            print(f'\t[bold][yellow]Changelog {log_version} :[/yellow][/bold]')
+                            print(
+                                f'\t[bold][yellow]Changelog {log_version} :[/yellow][/bold]')
                             logfile.write(f'\tChangelog {log_version} :\n')
                             for line in log_txt:
                                 print(f'\t\t[yellow]- {line}[/yellow]')
@@ -712,7 +784,8 @@ class VSUpdate:
 
         if len(self.mods_exclu) == 1:
             modinfo_values = self.extract_modinfo(self.mods_exclu[0])
-            print(f'\n {LanguageChoice().summary6} :\n - [red]{modinfo_values[0]} [italic](v.{modinfo_values[2]})[italic][/red]')
+            print(
+                f'\n {LanguageChoice().summary6} :\n - [red]{modinfo_values[0]} [italic](v.{modinfo_values[2]})[italic][/red]')
         if len(self.mods_exclu) > 1:
             print(f'\n {LanguageChoice().summary7} :')
             for k in range(0, len(self.mods_exclu)):
@@ -768,7 +841,9 @@ class GetInfo:
         with open(self.csvfile, "a", encoding="UTF-8", newline='') as fichier:
             objet_csv = csv.writer(fichier)
             for items in self.modsinfo_dic:
-                objet_csv.writerow([items, self.modsinfo_dic[items][0], self.modsinfo_dic[items][1], self.modsinfo_dic[items][2]])
+                objet_csv.writerow(
+                    [items, self.modsinfo_dic[items][0], self.modsinfo_dic[items][1],
+                     self.modsinfo_dic[items][2]])
         return self.modsinfo_dic
 
     def get_url(self, modid):
@@ -786,7 +861,8 @@ class GetInfo:
                 self.test_url_mod = f'https://mods.vintagestory.at/{mod_urlalias}'
             return self.test_url_mod
         except requests.exceptions.ReadTimeout:
-            write_log('ReadTimeout error: Server did not respond within the specified timeout.')
+            write_log(
+                'ReadTimeout error: Server did not respond within the specified timeout.')
         except urllib.error.URLError as err_url:
             # Affiche de l'erreur si le lien n'est pas valide
             print(f'[red]{LanguageChoice().error_msg}[/red]')
@@ -826,13 +902,14 @@ class MakePdf:
             monpdf.oversized_images = "DOWNSCALE"
             monpdf.oversized_images_ratio = 5
             width_img = 180
-            x = (210-width_img)/2
+            x = (210 - width_img) / 2
             monpdf.image('banner.png', x=x, y=5, w=width_img)
             # Titre
             monpdf.set_font("FreeSansBold", '', size=20)
             monpdf.set_text_color(0, 0, 0)  # Couleur RGB pour le titre
             monpdf.set_y(45)
-            monpdf.cell(w=0, h=20, text=f'{self.langchoice.pdfTitle}', border=0, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C", fill=False)
+            monpdf.cell(w=0, h=20, text=f'{self.langchoice.pdfTitle}', border=0,
+                        new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C", fill=False)
             table_data = []
             # On remplit la liste table_data
             with open(self.csvfile, newline='') as csv_file:
@@ -869,16 +946,31 @@ class MakePdf:
 # On récupère le system
 my_os = platform.system()
 
-
 # Définitions des arguments
 argParser = argparse.ArgumentParser()
-argParser.add_argument("--modspath", help='Enter the mods directory (in quotes).', required=False, type=pathlib.Path)
-argParser.add_argument("--language", help='Set the language file (Default=en_US - see the lang directory).', required=False)
-argParser.add_argument("--nopause", help="Disable the pause at the end of the script (default=false).", choices=['false', 'true'], type=str.lower, required=False, default='false')
-argParser.add_argument("--exclusion", help="Write filenames of mods with extension (in quotes) you want to exclude (each mod separated by space).", nargs="+")
-argParser.add_argument("--forceupdate", help="Force ModsUpdater to download the latest versions for ALL the mods (default=false).", choices=['false', 'true'], type=str.lower, required=False, default='false')
-argParser.add_argument("--makepdf", help="Create,at the end of the Update, a PDF file of all mods in the mods folder (default=false).", choices=['false', 'true'], type=str.lower, required=False, default='false')
-argParser.add_argument("--disable_mod_dev", help="enable or disable the update of mods in dev or prerelease (true/false default=false)", choices=['false', 'true'], type=str.lower, required=False)
+argParser.add_argument("--modspath", help='Enter the mods directory (in quotes).',
+                       required=False, type=pathlib.Path)
+argParser.add_argument("--language",
+                       help='Set the language file (Default=en_US - see the lang directory).',
+                       required=False)
+argParser.add_argument("--nopause",
+                       help="Disable the pause at the end of the script (default=false).",
+                       choices=['false', 'true'], type=str.lower, required=False,
+                       default='false')
+argParser.add_argument("--exclusion",
+                       help="Write filenames of mods with extension (in quotes) you want to exclude (each mod separated by space).",
+                       nargs="+")
+argParser.add_argument("--forceupdate",
+                       help="Force ModsUpdater to download the latest versions for ALL the mods (default=false).",
+                       choices=['false', 'true'], type=str.lower, required=False,
+                       default='false')
+argParser.add_argument("--makepdf",
+                       help="Create,at the end of the Update, a PDF file of all mods in the mods folder (default=false).",
+                       choices=['false', 'true'], type=str.lower, required=False,
+                       default='false')
+argParser.add_argument("--disable_mod_dev",
+                       help="enable or disable the update of mods in dev or prerelease (true/false default=false)",
+                       choices=['false', 'true'], type=str.lower, required=False)
 args = argParser.parse_args()
 # Fin des arguments
 
@@ -911,7 +1003,8 @@ def arg_modspath():
     else:
         regex_path_mods = None
         var_env = None
-    result_path_mods = re.search(regex_path_mods, str(path_mods_raw), flags=re.IGNORECASE)
+    result_path_mods = re.search(regex_path_mods, str(path_mods_raw),
+                                 flags=re.IGNORECASE)
     if result_path_mods:
         part2 = result_path_mods.group(2)
         part2 = part2[1:]  # On retire le 1er charactere (\ ou /)
@@ -962,11 +1055,19 @@ if path_mods.is_dir():
 if args.nopause == 'false' or args.makepdf == 'true':
     make_pdf = None
     if args.makepdf == 'false':
-        while make_pdf not in {str(LanguageChoice().yes).lower(), str(LanguageChoice().yes[0]).lower(), str(LanguageChoice().no).lower(), str(LanguageChoice().no[0]).lower()}:
-            make_pdf = Prompt.ask(f'{LanguageChoice().makepdf}', choices=[LanguageChoice().list_yesno[0], LanguageChoice().list_yesno[1], LanguageChoice().list_yesno[2], LanguageChoice().list_yesno[3]])
+        while make_pdf not in {str(LanguageChoice().yes).lower(),
+                               str(LanguageChoice().yes[0]).lower(),
+                               str(LanguageChoice().no).lower(),
+                               str(LanguageChoice().no[0]).lower()}:
+            make_pdf = Prompt.ask(f'{LanguageChoice().makepdf}',
+                                  choices=[LanguageChoice().list_yesno[0],
+                                           LanguageChoice().list_yesno[1],
+                                           LanguageChoice().list_yesno[2],
+                                           LanguageChoice().list_yesno[3]])
     else:
         make_pdf = str(LanguageChoice().yes).lower()
-    if make_pdf == str(LanguageChoice().yes).lower() or make_pdf == str(LanguageChoice().yes[0]).lower():
+    if make_pdf == str(LanguageChoice().yes).lower() or make_pdf == str(
+            LanguageChoice().yes[0]).lower():
         # Construction du titre
         asterisk = '*'
         nb_asterisk = len(LanguageChoice().makePDFTitle) + 4
@@ -984,16 +1085,21 @@ if args.nopause == 'false' or args.makepdf == 'true':
             if os.path.splitext(mod)[1] == '.zip' or os.path.splitext(mod)[1] == '.cs':
                 nb_mods += 1
         for modfilepath in glob.glob(str(mod_file_path)):
-            if os.path.splitext(modfilepath)[1] == '.zip' or os.path.splitext(modfilepath)[1] == '.cs':
+            if os.path.splitext(modfilepath)[1] == '.zip' or \
+                    os.path.splitext(modfilepath)[1] == '.cs':
                 nb_mods_ok += 1
                 info_content = VSUpdate(modfilepath).extract_modinfo(modfilepath)
-                GetInfo(info_content[0], info_content[1], info_content[3], info_content[4]).get_infos()
-                print(f'\t\t{LanguageChoice().addingmodsinprogress} {nb_mods_ok}/{nb_mods}', end="\r")
+                GetInfo(info_content[0], info_content[1], info_content[3],
+                        info_content[4]).get_infos()
+                print(
+                    f'\t\t{LanguageChoice().addingmodsinprogress} {nb_mods_ok}/{nb_mods}',
+                    end="\r")
         pdf = MakePdf()
         pdf.makepdf()
         if args.makepdf == 'false':
             input(f'{LanguageChoice().exiting_script}')
-    elif make_pdf == str(lang.no).lower() or make_pdf == str(LanguageChoice().no[0]).lower():
+    elif make_pdf == str(lang.no).lower() or make_pdf == str(
+            LanguageChoice().no[0]).lower():
         print(f'{LanguageChoice().end_of_prg} ')
         time.sleep(2)
 
