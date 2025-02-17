@@ -12,8 +12,8 @@ Vintage Story mod management:
 - Possibility of generating a pdf file of the mod list
 """
 __author__ = "Laerinok"
-__date__ = "2025-02-16"
-__version__ = "1.4.1"
+__date__ = "2025-02-17"
+__version__ = "1.4.2"
 
 import argparse
 import configparser
@@ -31,6 +31,7 @@ import time
 import traceback
 import urllib.error
 import urllib.request
+import urllib.parse
 import zipfile
 from datetime import datetime
 from pathlib import Path
@@ -206,7 +207,7 @@ class VSUpdate:
         # Creation des dossiers et fichiers
         if not self.path_temp.is_dir():
             os.mkdir('temp')
-        # On crée le fichier config.ini si inexistant, puis (si lancement du script via l'executable et non en ligne de commande) on sort du programme si on veut ajouter des mods à exclure
+        # On crée le fichier config.ini si inexistant, puis (si lancement du script via l'executable et non en ligne de commande) on sort du programme si on veut ajouter des mods à exclure.
         if not self.config_file.is_file():
             if args.nopause == 'false':
                 print(
@@ -633,7 +634,8 @@ class VSUpdate:
         self.liste_mod_maj_filename.sort(key=lambda s: s.casefold())
         for modexclu in self.mods_exclu:
             if modexclu in self.liste_mod_maj_filename:
-                self.liste_mod_maj_filename.remove(modexclu)  # contient la liste des mods à mettre a jour avec les noms de fichier
+                self.liste_mod_maj_filename.remove(
+                    modexclu)  # contient la liste des mods à mettre a jour avec les noms de fichier
         # On vérifie si le mod est sur moddb
         for mod_maj in self.liste_mod_maj_filename:
             modid_value = self.extract_modinfo(mod_maj)[1]
@@ -645,8 +647,18 @@ class VSUpdate:
                 # on crée la liste des mods à vérifier
                 self.mods_to_check.append(mod_maj)
             elif statuscode == '404':
-                # On ajoute les mods non présents sur moddb à la liste des exclusion
-                self.mods_exclu.append(mod_maj)
+                # On retire de la liste le mod non présent
+                self.liste_mod_maj_filename.remove(mod_maj)
+
+    @staticmethod
+    def normalize_version(version):
+        # Normaliser en supprimant les zéros inutiles dans les segments
+        version_parts = version.split('.')
+        # Enlever les zéros inutiles dans la partie 'patch'
+        version_parts[-1] = str(
+            int(version_parts[-1]))  # Convertir en entier et de retour en string
+        normalized_version = '.'.join(version_parts)
+        return normalized_version
 
     def update_mods(self):
         # Comparaison et maj des mods
@@ -657,6 +669,7 @@ class VSUpdate:
             if modid_value == '':
                 modid_value = re.sub(r'\s', '', modname_value).lower()
             filename_value = self.extract_modinfo(mod_maj)[4]
+            # mod url in modDB
             mod_url_api = f'{self.url_api}{modid_value}'
             # On teste la validité du lien url
             req = urllib.request.Request(str(mod_url_api))
@@ -666,22 +679,34 @@ class VSUpdate:
                 resp_dict = req_page.json()
                 mod_asset_id = (resp_dict['mod']['assetid'])
                 self.mod_last_version_online = (
-                resp_dict['mod']['releases'][0]['modversion'])
-                mod_file_onlinepath = (resp_dict['mod']['releases'][0]['mainfile'])
-                mod_prerelease_value = semver.Version.parse(
-                    self.mod_last_version_online)
+                    resp_dict['mod']['releases'][0]['modversion'])
+                mod_file_onlinepath_raw = (resp_dict['mod']['releases'][0]['mainfile'])
+                # Common domain
+                base_domain = "https://moddbcdn.vintagestory.at/"
+                # URL parsing
+                parsed_url = urllib.parse.urlparse(mod_file_onlinepath_raw)
+                # Extraction of the "path" (after the domain)
+                file_path = parsed_url.path
+                # Extraction of parameters (query string)
+                params = parsed_url.query
+                # Encoding of parameters to ensure they are valid in a URL
+                encoded_params = urllib.parse.quote(params, safe="=&")
+                # Reconstruction of the final URL
+                mod_file_onlinepath = f"{base_domain}{file_path}?{encoded_params}"
+                normalized_version = self.normalize_version(self.mod_last_version_online)
+                mod_prerelease_value = semver.Version.parse(normalized_version)
                 # compare les versions des mods
                 print(
                     f' [green]{modname_value[0].upper()}{modname_value[1:]}[/green]: {LanguageChoice().compver1} : {self.version_locale} - {LanguageChoice().compver2} : {self.mod_last_version_online}')
                 if self.disable_mod_dev == 'false' or mod_prerelease_value.prerelease is None:
-                    # On récupère les version du jeu nécessaire pour le mod (cad la version la plus basse necessaire)
+                    # On récupère les version du jeu nécessaire pour le mod (cad la version la plus basse necessaire).
                     mod_game_versions = resp_dict['mod']['releases'][0]['tags']
                     first_min_ver = None
                     for ver in mod_game_versions:
                         first_min_ver = ver.split('v', 1)[1]
                     result_compversion_local = self.compversion_local(
-                        self.version_locale,
-                        self.mod_last_version_online)  # (version locale, version online)
+                        self.normalize_version(self.version_locale),
+                        self.normalize_version(self.mod_last_version_online))  # (version locale, version online)
                     # On compare la version max souhaité à la version necessaire pour le mod
                     result_game_compare_version = self.compversion_first_min_version(
                         self.gamever_limit,
@@ -690,7 +715,8 @@ class VSUpdate:
                         if result_compversion_local == -1 or (
                                 result_compversion_local == 0 and self.force_update.lower() == 'true'):
                             dl_link = f'{mod_file_onlinepath}'
-                            resp = requests.get(str(dl_link), stream=True, timeout=2, allow_redirects=False)
+                            resp = requests.get(str(dl_link), stream=True, timeout=2,
+                                                allow_redirects=False)
                             file_size = int(resp.headers.get("Content-length"))
                             file_size_mo = round(file_size / (1024 ** 2), 2)
                             print(
@@ -704,7 +730,7 @@ class VSUpdate:
                                 msg_error = f'{filename_value} :\n\n\t {traceback.format_exc()}'
                                 write_log(msg_error)
                                 sys.exit()
-                            wget.download(dl_link, str(self.path_mods))  # debug
+                            wget.download(dl_link, str(self.path_mods))
                             self.Path_Changelog = f'https://mods.vintagestory.at/show/mod/{mod_asset_id}#tab-files'
                             log_txt = self.get_changelog(
                                 self.Path_Changelog)  # On récupère le changelog
@@ -832,7 +858,10 @@ class GetInfo:
             except KeyError:
                 pass
             zipfile.ZipFile.close(archive)
-        self.mod_url = self.get_url(self.mod_id)
+        if self.get_url(self.mod_id) is None:
+            self.mod_url = "Not on modDB"
+        else:
+            self.mod_url = self.get_url(self.mod_id)
         self.moddesc_lst.append(self.mod_moddesc)
         self.moddesc_lst.append(self.mod_url)
         self.moddesc_lst.append(self.path_modicon)
@@ -848,21 +877,25 @@ class GetInfo:
 
     def get_url(self, modid):
         url = os.path.join(self.api_url, modid)
-        req = urllib.request.Request(url)
         try:
-            urllib.request.urlopen(req)  # On teste l'existence du lien
             req_page = requests.get(url, timeout=2)
             resp_dict = req_page.json()
-            mod_asset_id = str(resp_dict['mod']['assetid'])
-            mod_urlalias = str(resp_dict['mod']['urlalias'])
+            mod_asset_id = str(
+                resp_dict.get('mod', {}).get('assetid', 'Local Mod'))
+            mod_urlalias = str(
+                resp_dict.get('mod', {}).get('urlalias', 'Local'))
             if mod_urlalias == 'None':
                 self.test_url_mod = f'https://mods.vintagestory.at/show/mod/{mod_asset_id}'
+            elif mod_urlalias == 'Local':
+                self.test_url_mod = ""
             else:
                 self.test_url_mod = f'https://mods.vintagestory.at/{mod_urlalias}'
             return self.test_url_mod
         except requests.exceptions.ReadTimeout:
             write_log(
                 'ReadTimeout error: Server did not respond within the specified timeout.')
+        except urllib.error.HTTPError:
+            return None
         except urllib.error.URLError as err_url:
             # Affiche de l'erreur si le lien n'est pas valide
             print(f'[red]{LanguageChoice().error_msg}[/red]')
