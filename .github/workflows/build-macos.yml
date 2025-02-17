@@ -33,10 +33,10 @@ jobs:
       - name: Compiler le script avec PyInstaller
         run: |
           source venv/bin/activate
-          pyinstaller --onefile VS_ModsUpdater.py  # Remplace mon_script.py par ton script Python
+          pyinstaller /PyInstaller/spec/VS_ModsUpdater.spec  # Remplace mon_script.py par ton script Python
 
       - name: Sauvegarder l'exécutable comme artefact
         uses: actions/upload-artifact@v4
         with:
           name: macOS-executable
-          path: dist/VS_ModsUpdater.app  # Remplace mon_script.app par le nom de ton exécutable généré
+          path: PyInstaller/dist/VS_ModsUpdater.app  # Remplace mon_script.app par le nom de ton exécutable généré
