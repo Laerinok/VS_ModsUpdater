@@ -1,0 +1,42 @@
+name: Build macOS Executable
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-latest  # Utilisation d'un runner macOS
+
+    steps:
+      - name: Cloner le repo
+        uses: actions/checkout@v4
+
+      - name: Installer la version de Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'  # Remplace par la version exacte que tu utilises, par exemple '3.8', '3.9', etc.
+
+      - name: Créer l'environnement virtuel
+        run: |
+          python -m venv venv  # Crée l'environnement virtuel avec la version de Python spécifiée
+          source venv/bin/activate
+
+      - name: Installer les dépendances depuis requirements.txt
+        run: |
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt  # Installe toutes les dépendances spécifiées dans requirements.txt
+
+      - name: Compiler le script avec PyInstaller
+        run: |
+          source venv/bin/activate
+          pyinstaller --onefile VS_ModsUpdater.py  # Remplace mon_script.py par ton script Python
+
+      - name: Sauvegarder l'exécutable comme artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macOS-executable
+          path: dist/VS_ModsUpdater.app  # Remplace mon_script.app par le nom de ton exécutable généré
