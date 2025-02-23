@@ -12,7 +12,8 @@ Net7_updates*.*
 *.ini
 *.pdf
 /vintagestory-at-chain.pem
-PyInstaller/
+PyInstaller/build
+PyInstaller/dist
 metadata.yml
 
 
