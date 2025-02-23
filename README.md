@@ -12,7 +12,7 @@ All you have do to is :
 <p>Before quitting the program, you can choose to generate a pdf file listing ALL your mods in the 'Mods' folder.</p>
 
 
-## Linux
+## Linux (Thanks [https://github.com/sTiKyt](sTiKyt))
 
 How to use this script on any linux distro? Just follow those steps!
 1. Clone this repository:
