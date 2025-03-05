@@ -1,3 +1,7 @@
+v1.4.3
+- fixed: error when mods have description with CJK characters
+- fixed: some regex.
+
 v1.4.2
 - fixed: error/crash when there is a mod in the mods folder which is not on modDB for the pdf creation.
 - fixed: error when mod have space in filename.

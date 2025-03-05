@@ -12,8 +12,8 @@ Vintage Story mod management:
 - Possibility of generating a pdf file of the mod list
 """
 __author__ = "Laerinok"
-__date__ = "2025-02-17"
-__version__ = "1.4.2"
+__date__ = "2025-03-05"
+__version__ = "1.4.3-pre1"
 
 import argparse
 import configparser
@@ -924,8 +924,8 @@ class MakePdf:
         try:
             # On crée le pdf
             monpdf = FPDF('P', 'mm', 'A4')
-            monpdf.add_font('FreeSans', '', str(Path('font', 'FreeSans.ttf')))
-            monpdf.add_font('FreeSansBold', '', str(Path('font', 'FreeSansBold.ttf')))
+            monpdf.add_font('NotoSansCJKsc-Regular', '', str(Path('font', 'NotoSansCJKsc-Regular.ttf')))
+            # monpdf.add_font('FreeSansBold', '', str(Path('font', 'FreeSansBold.ttf')))  # debug
             margintop_page = 10
             monpdf.set_top_margin(margintop_page)
             monpdf.set_auto_page_break(True, margin=10)
@@ -938,14 +938,14 @@ class MakePdf:
             x = (210 - width_img) / 2
             monpdf.image('banner.png', x=x, y=5, w=width_img)
             # Titre
-            monpdf.set_font("FreeSansBold", '', size=20)
+            monpdf.set_font("NotoSansCJKsc-Regular", '', size=20)
             monpdf.set_text_color(0, 0, 0)  # Couleur RGB pour le titre
             monpdf.set_y(45)
             monpdf.cell(w=0, h=20, text=f'{self.langchoice.pdfTitle}', border=0,
                         new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C", fill=False)
             table_data = []
             # On remplit la liste table_data
-            with open(self.csvfile, newline='') as csv_file:
+            with open(self.csvfile, newline='', encoding="utf-8", errors="replace") as csv_file:
                 reader = csv.reader(csv_file, delimiter=',')
                 for ligne in reader:
                     table_data.append(ligne)
@@ -958,10 +958,10 @@ class MakePdf:
                     row = table.row()
                     row.cell(img=ligne[3], img_fill_width=True, link=ligne[2])
                     # cellule 2 - nom du mod
-                    monpdf.set_font("FreeSansBold", '', size=7)
+                    monpdf.set_font("NotoSansCJKsc-Regular", '', size=7)
                     row.cell(ligne[0], link=ligne[2])
                     # cellule 3 - description
-                    monpdf.set_font("FreeSans", '', size=7)
+                    monpdf.set_font("NotoSansCJKsc-Regular", '', size=7)
                     row.cell(ligne[1])
         except Exception:
             print(f'[red]{LanguageChoice().error_msg}[/red]')
