@@ -223,17 +223,17 @@ class VSUpdate:
                     show_choices=False, default='2')
                 for region, lang_ext in LanguageChoice().dic_lang.items():
                     if lang_choice_result == lang_ext[2]:
-                        self.file_lang_path = f'lang\{lang_ext[0]}_{region}.json'
+                        self.file_lang_path = Path('lang', '{lang_ext[0]}_{region}.json')
                         self.lang_name = lang_ext[1]
             else:
                 if args.language:
-                    self.file_lang_path = f'lang\{args.language}.json'
+                    self.file_lang_path = Path('lang', '{args.language}.json')
                     for region, lang_ext in LanguageChoice().dic_lang.items():
                         # On récupere le nom de la langue
                         if region == args.language.split('_')[1]:
                             self.lang_name = lang_ext[1]
                 else:
-                    self.file_lang_path = f'lang\en_US.json'
+                    self.file_lang_path = Path('lang', 'en_US.json')
                     self.lang_name = 'English'
             # On crée le fichier config.ini
             self.set_config_ini()
@@ -453,9 +453,9 @@ class VSUpdate:
             self.filepath = Path(self.path_mods, file)
             with open(self.filepath, "r", encoding='utf-8-sig') as fichier_cs:
                 cs_file = fichier_cs.read()
-                regexp_name = '(namespace )(\w*)'
+                regexp_name = '(namespace )(\\w*)'
                 result_name = re.search(regexp_name, cs_file, flags=re.IGNORECASE)
-                regexp_version = '(Version\s=\s\")([\d.]*)\"'
+                regexp_version = '(Version\\s=\\s\")([\\d.]*)\"'
                 result_version = re.search(regexp_version, cs_file, flags=re.IGNORECASE)
                 regexp_description = 'Description = "(.*)",'
                 result_description = re.search(regexp_description, cs_file,
@@ -529,7 +529,7 @@ class VSUpdate:
 
     @staticmethod
     def get_max_version(versions):  # uniquement versions stables
-        regexp_max_version = 'v([\d.]*)([\W\w]*)'
+        regexp_max_version = 'v([\\d.]*)([\\W\\w]*)'
         max_version = re.search(regexp_max_version, max(versions))
         max_version = max_version[1]
         return max_version
