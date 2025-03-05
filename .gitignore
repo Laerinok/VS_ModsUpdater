@@ -171,3 +171,6 @@ cython_debug/
 #.idea/
 /VS_ModsUpdater - Copie.py
 /todolist.txt
+/DL_mods_list.py
+/VS_ModsUpdater - v1.5.0_aborted.py
+/PyInstaller/spec/file_version_info.txt
