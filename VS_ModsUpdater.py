@@ -492,15 +492,18 @@ class VSUpdate:
         try:
             # Vérifier si le fichier est un ZIP valide
             if not zipfile.is_zipfile(filepath):
-                print(f"[red]The file {filepath} is not a valid ZIP file.[/red]")
+                msg_error = f"The file {filepath} is not a valid ZIP file."
+                print(f"[red]{msg_error}[/red]")
+                write_log(msg_error)
                 return False
 
             # Ouvrir le fichier ZIP et tester son intégrité
             with zipfile.ZipFile(filepath, 'r') as zip_file:
                 corrupted_file = zip_file.testzip()
                 if corrupted_file is not None:
-                    print(
-                        f"[red]The ZIP file {filepath} is corrupted: {corrupted_file}[/red]")
+                    msg_error = f"The ZIP file {filepath} is corrupted: {corrupted_file}"
+                    print(f"[red]{msg_error}[/red]")
+                    write_log(msg_error)
                     return False
 
             # Si le fichier passe les deux tests, il est valide
