@@ -1,6 +1,7 @@
 v1.4.3-pre2
 - fixed: crash when a zip file is corrupted.
-- changed: timeout from 2 to 5
+- tweaked: timeout from 2 to 5
+- tweaked: destination pdf file to 'modslist' folder
 
 v1.4.3-pre1
 - fixed: error when mods have description with CJK characters
