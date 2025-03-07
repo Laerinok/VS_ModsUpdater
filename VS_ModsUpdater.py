@@ -238,11 +238,13 @@ class VSUpdate:
                     show_choices=False, default='2')
                 for region, lang_ext in LanguageChoice().dic_lang.items():
                     if lang_choice_result == lang_ext[2]:
-                        self.file_lang_path = Path('lang', '{lang_ext[0]}_{region}.json')
+                        langue_file_name = f'{lang_ext[0]}_{region}.json'
+                        self.file_lang_path = Path('lang', langue_file_name)
                         self.lang_name = lang_ext[1]
             else:
                 if args.language:
-                    self.file_lang_path = Path('lang', '{args.language}.json')
+                    langue_file_name = f'{args.language}.json'
+                    self.file_lang_path = Path('lang', langue_file_name)
                     for region, lang_ext in LanguageChoice().dic_lang.items():
                         # On récupere le nom de la langue
                         if region == args.language.split('_')[1]:
