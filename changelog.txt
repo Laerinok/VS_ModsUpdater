@@ -6,6 +6,7 @@ v1.4.3-pre2
 - twaeked: small fix for error msg
 - tweaked: changed log file name to reduce occurrences.
 
+
 v1.4.3-pre1
 - fixed: error when mods have description with CJK characters
 - fixed: some regex.

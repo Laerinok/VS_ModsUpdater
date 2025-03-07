@@ -374,7 +374,7 @@ class VSUpdate:
             if args.language:
                 config.set('Language', 'language', args.language)  # from command line
             else:
-                regex_lang = r'lang\\([a-z]{1,2}_[A-Z]{1,2})'
+                regex_lang = r'lang[/\\]([a-z]{1,2}_[A-Z]{1,2})\.json'
                 resul_lang = re.search(regex_lang, str(self.file_lang_path))
                 config.set('Language', 'language', resul_lang[1])
             config.add_section('Game_Version_max')
