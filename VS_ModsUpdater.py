@@ -51,7 +51,7 @@ def write_log(info_crash):
     if not Path('logs').is_dir():
         os.mkdir('logs')
     log_path = Path('logs').joinpath(
-        f'debug-log-{dt.datetime.today().strftime("%Y%m%d%H%M%S")}.txt')
+        f'debug-log-{dt.datetime.today().strftime("%Y%m%d%H%M")}.txt')
     with open(log_path, 'a', encoding='UTF-8') as crashlog_file:
         crashlog_file.write(
             f'{dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S")} : {info_crash}\n')
