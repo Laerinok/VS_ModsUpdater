@@ -3,6 +3,8 @@ v1.4.3-pre2
 - fixed: crash at first run due to regex changes in 1.4.3-pre1
 - tweaked: timeout from 2 to 5
 - tweaked: destination pdf file to 'modslist' folder
+- twaeked: small fix for error msg
+- tweaked: changed log file name to reduce occurrences.
 
 v1.4.3-pre1
 - fixed: error when mods have description with CJK characters
