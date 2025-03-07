@@ -12,8 +12,8 @@ Vintage Story mod management:
 - Possibility of generating a pdf file of the mod list
 """
 __author__ = "Laerinok"
-__date__ = "2025-03-05"
-__version__ = "1.4.3-pre1"
+__date__ = "2025-03-06"
+__version__ = "1.4.3-pre2"
 
 import argparse
 import configparser
@@ -47,8 +47,7 @@ from rich.prompt import Prompt
 
 # Creation of a logfile
 def write_log(info_crash):
-    print(
-        f'An error occured. Please see the debug-log file in logs folder for more information.')
+    # print(f'An error occured. Please see the debug-log file in logs folder for more information.')  # debug
     if not Path('logs').is_dir():
         os.mkdir('logs')
     log_path = Path('logs').joinpath(
@@ -56,6 +55,22 @@ def write_log(info_crash):
     with open(log_path, 'a', encoding='UTF-8') as crashlog_file:
         crashlog_file.write(
             f'{dt.datetime.today().strftime("%Y-%m-%d %H:%M:%S")} : {info_crash}\n')
+
+
+def make_dl_link(mod_file_onlinepath_raw):
+    # Common domain
+    base_domain = "https://moddbcdn.vintagestory.at/"
+    # URL parsing
+    parsed_url = urllib.parse.urlparse(mod_file_onlinepath_raw)
+    # Extraction of the "path" (after the domain)
+    file_path = parsed_url.path
+    # Extraction of parameters (query string)
+    params = parsed_url.query
+    # Encoding of parameters to ensure they are valid in a URL
+    encoded_params = urllib.parse.quote(params, safe="=&")
+    # Reconstruction of the final URL
+    mod_file_onlinepath = f"{base_domain}{file_path}?{encoded_params}"
+    return mod_file_onlinepath
 
 
 class LanguageChoice:
@@ -186,7 +201,7 @@ class MajScript:
                 'ReadTimeout error: Server did not respond within the specified timeout.')
         except urllib.error.URLError as err_url:
             # Affiche de l'erreur si le lien n'est pas valide
-            print(f'[red]{LanguageChoice().error_msg}[/red]')
+            # print(f'[red]{LanguageChoice().error_msg}[/red]')  # debug
             msg_error = f'{err_url.reason} : {url_script}'
             write_log(msg_error)
 
@@ -399,13 +414,16 @@ class VSUpdate:
         return self.name_json, self.version_json, self.modid_json, self.moddesc_json
 
     def extract_modinfo(self, file):
+        mod_name = None
+        mod_modid = None
+        mod_version = None
+        mod_description = None
         # On trie les fichiers .zip et .cs
         type_file = Path(file).suffix
         if type_file == '.zip':
             # On lit le fichier modinfo.json de l'archive et on recupere le modid, name et version
             self.filepath = Path(self.path_mods, file)
-            if zipfile.is_zipfile(
-                    self.filepath):  # Vérifie si fichier est un Zip valide
+            if zipfile.is_zipfile(self.filepath):  # Vérifie si fichier est un Zip valide
                 with zipfile.ZipFile(self.filepath) as fichier_zip:
                     with fichier_zip.open('modinfo.json') as modinfo_json:
                         self.modinfo_content = modinfo_json.read().decode('utf-8-sig')
@@ -443,10 +461,10 @@ class VSUpdate:
                     else:
                         mod_description = ''
                 except Exception:
-                    print(f'[red]{LanguageChoice().error_msg}[/red]')
+                    # print(f'[red]{LanguageChoice().error_msg}[/red]')  # debug
                     msg_error = f'{file} :\n\n\t {traceback.format_exc()}'
                     write_log(msg_error)
-                print(f'[red]{LanguageChoice().error_msg}[/red]')
+                # print(f'[red]{LanguageChoice().error_msg}[/red]')  # debug
                 msg_error = f'{file} :\n\n\t {traceback.format_exc()}'
                 write_log(msg_error)
         elif type_file == '.cs':
@@ -466,23 +484,55 @@ class VSUpdate:
                 mod_description = result_description[1]
         return mod_name, mod_modid, mod_version, mod_description, self.filepath
 
+    @staticmethod
+    def test_zip_validity(filepath):
+        """Vérifie si le fichier est un ZIP valide et non corrompu."""
+        try:
+            # Vérifier si le fichier est un ZIP valide
+            if not zipfile.is_zipfile(filepath):
+                print(f"[red]The file {filepath} is not a valid ZIP file.[/red]")
+                return False
+
+            # Ouvrir le fichier ZIP et tester son intégrité
+            with zipfile.ZipFile(filepath, 'r') as zip_file:
+                corrupted_file = zip_file.testzip()
+                if corrupted_file is not None:
+                    print(
+                        f"[red]The ZIP file {filepath} is corrupted: {corrupted_file}[/red]")
+                    return False
+
+            # Si le fichier passe les deux tests, il est valide
+            return True
+        except Exception as e:
+            print(f"[red]Error occurred while processing {filepath}: {e}[/red]")
+            return False
+
     def liste_complete_mods(self):
         # On crée la liste contenant les noms des fichiers zip des mods
         for elem in self.path_mods.glob('*.zip'):
-            mod_zipfile = zipfile.ZipFile(elem, 'r')
-            with mod_zipfile:
-                try:  # On ajoute uniquement les fichiers zip qui sont des mods
-                    zipfile.ZipFile.getinfo(mod_zipfile, 'modinfo.json')
+            # Vérifier la validité du fichier ZIP
+            if not self.test_zip_validity(elem):
+                continue  # Ignore les fichiers invalides ou corrompus
+
+            # Ouvrir le fichier ZIP et vérifier qu'il contient le fichier 'modinfo.json'
+            with zipfile.ZipFile(elem, 'r') as mod_zipfile:
+                try:
+                    mod_zipfile.getinfo(
+                        'modinfo.json')  # Vérifier la présence du fichier 'modinfo.json'
                     self.mod_filename.append(elem.name)
                 except KeyError:
-                    pass
+                    pass  # Si 'modinfo.json' n'est pas trouvé, on l'ignore
+
         # On ajoute les fichiers .cs
         for elem_cs in self.path_mods.glob('*.cs'):
             self.mod_filename.append(elem_cs.name)
+
+        # Si aucun fichier valide n'a été ajouté, afficher un message d'erreur et quitter
         if len(self.mod_filename) == 0:
             print(f"{LanguageChoice().err_list}")
             os.system("pause")
             sys.exit()
+
         return self.mod_filename
 
     @staticmethod
@@ -542,7 +592,7 @@ class VSUpdate:
         lst_log_desc = []
         try:
             urllib.request.urlopen(req_url)
-            req_page_url = requests.get(url, timeout=2)
+            req_page_url = requests.get(url, timeout=5)
             page = req_page_url.content
             soup = BeautifulSoup(page, features="html.parser")
             soup_full_changelog = soup.find("div", {"class": "changelogtext"})
@@ -585,7 +635,7 @@ class VSUpdate:
                 'ReadTimeout error: Server did not respond within the specified timeout.')
         except urllib.error.URLError as err_url:
             # Affiche de l'erreur si le lien n'est pas valide
-            print(f'[red]{LanguageChoice().error_msg}[/red]')
+            # print(f'[red]{LanguageChoice().error_msg}[/red]')  # debug
             msg_error = f'{err_url.reason} : {url}'
             write_log(msg_error)
         return log
@@ -622,7 +672,7 @@ class VSUpdate:
             except configparser.NoSectionError:
                 pass
             except configparser.InterpolationSyntaxError as err_parsing:
-                print(f'[red]{LanguageChoice().error_msg}[/red]')
+                # print(f'[red]{LanguageChoice().error_msg}[/red]')  # debug
                 msg_error = f'Error in config.ini [Mod_Exclusion] - mod{str(j)} : {str(err_parsing)}'
                 write_log(msg_error)
                 sys.exit()
@@ -640,7 +690,7 @@ class VSUpdate:
         for mod_maj in self.liste_mod_maj_filename:
             modid_value = self.extract_modinfo(mod_maj)[1]
             mod_url_test = f'{self.url_api}{modid_value}'
-            req_page = requests.get(str(mod_url_test), timeout=2)
+            req_page = requests.get(str(mod_url_test), timeout=5)
             resp_dict = req_page.json()
             statuscode = resp_dict['statuscode']
             if statuscode == '200':
@@ -681,18 +731,7 @@ class VSUpdate:
                 self.mod_last_version_online = (
                     resp_dict['mod']['releases'][0]['modversion'])
                 mod_file_onlinepath_raw = (resp_dict['mod']['releases'][0]['mainfile'])
-                # Common domain
-                base_domain = "https://moddbcdn.vintagestory.at/"
-                # URL parsing
-                parsed_url = urllib.parse.urlparse(mod_file_onlinepath_raw)
-                # Extraction of the "path" (after the domain)
-                file_path = parsed_url.path
-                # Extraction of parameters (query string)
-                params = parsed_url.query
-                # Encoding of parameters to ensure they are valid in a URL
-                encoded_params = urllib.parse.quote(params, safe="=&")
-                # Reconstruction of the final URL
-                mod_file_onlinepath = f"{base_domain}{file_path}?{encoded_params}"
+                mod_file_onlinepath = make_dl_link(mod_file_onlinepath_raw)
                 normalized_version = self.normalize_version(self.mod_last_version_online)
                 mod_prerelease_value = semver.Version.parse(normalized_version)
                 # compare les versions des mods
@@ -726,7 +765,7 @@ class VSUpdate:
                             try:
                                 os.remove(filename_value)
                             except PermissionError:
-                                print(f'[red]{LanguageChoice().error_msg}[/red]')
+                                # print(f'[red]{LanguageChoice().error_msg}[/red]')  # debug
                                 msg_error = f'{filename_value} :\n\n\t {traceback.format_exc()}'
                                 write_log(msg_error)
                                 sys.exit()
@@ -742,12 +781,13 @@ class VSUpdate:
                             self.mods_updated[modname_value] = content_lst_mods_updated
                             print('\n')
                             self.nb_maj += 1
+
             except requests.exceptions.ReadTimeout:
                 write_log(
                     'ReadTimeout error: Server did not respond within the specified timeout.')
             except urllib.error.URLError as err_url:
                 # Affiche de l'erreur si le lien n'est pas valide
-                print(f'[red]{LanguageChoice().error_msg}[/red]')
+                # print(f'[red]{LanguageChoice().error_msg}[/red]')  # debug
                 msg_error = f'{err_url.reason} : {modname_value}'
                 write_log(msg_error)
             except Exception:
@@ -824,7 +864,6 @@ class VSUpdate:
 class GetInfo:
     def __init__(self, mod_name, mod_id, mod_moddesc, mod_filepath):
         # path
-        self.csvfile = Path('temp', 'csvtemp.csv')
         self.filepath = mod_filepath
         self.path_temp = 'temp'
         self.path_png = Path('temp', 'png')
@@ -842,38 +881,54 @@ class GetInfo:
         self.mod_id = mod_id
         self.modinfo_content = None
         self.test_url_mod = ''
+        # var temps
+        self.current_dateTime = datetime.now()
+        self.date_dl = self.current_dateTime.strftime("%Y-%m-%d %H:%M")
+        self.annee = self.current_dateTime.strftime("%Y")
+        self.mois = self.current_dateTime.strftime("%m")
+        self.jour = self.current_dateTime.strftime("%d")
+        # path
+        os.makedirs('Modslist', exist_ok=True)
+        modslist_basename = f'modslist_{self.annee}_{self.mois}_{self.jour}.csv'
+        self.csvfile = Path('Modslist', modslist_basename)
+        self.csv_temp_file = Path('temp', 'csvtemp.csv')
 
     def get_infos(self):
-        # extraction modicon.png et renommage avec modid
-        if zipfile.is_zipfile(self.filepath):
-            archive = zipfile.ZipFile(self.filepath, 'r')
-            try:
-                archive.extract('modicon.png', self.path_png)
-                png_name = f'{self.mod_id}.png'
-                self.path_modicon = Path(self.path_png, png_name)
+        # Vérifier la validité du fichier ZIP avec la méthode statique
+        if VSUpdate.test_zip_validity(self.filepath):
+            # extraction modicon.png et renommage avec modid
+            if zipfile.is_zipfile(self.filepath):
+                archive = zipfile.ZipFile(self.filepath, 'r')
                 try:
-                    os.rename(Path(self.path_png, 'modicon.png'), self.path_modicon)
-                except FileExistsError:
+                    archive.extract('modicon.png', self.path_png)
+                    png_name = f'{self.mod_id}.png'
+                    self.path_modicon = Path(self.path_png, png_name)
+                    try:
+                        os.rename(Path(self.path_png, 'modicon.png'), self.path_modicon)
+                    except FileExistsError:
+                        pass
+                except KeyError:
                     pass
-            except KeyError:
-                pass
-            zipfile.ZipFile.close(archive)
-        if self.get_url(self.mod_id) is None:
-            self.mod_url = "Not on modDB"
+                zipfile.ZipFile.close(archive)
+            if self.get_url(self.mod_id) is None:
+                self.mod_url = "Not on modDB"
+            else:
+                self.mod_url = self.get_url(self.mod_id)
+            self.moddesc_lst.append(self.mod_moddesc)
+            self.moddesc_lst.append(self.mod_url)
+            self.moddesc_lst.append(self.path_modicon)
+            self.modsinfo_dic[self.mod_name] = self.moddesc_lst
+            # On crée le csv
+            with open(self.csv_temp_file, "a", encoding="UTF-8", newline='') as fichier:
+                objet_csv = csv.writer(fichier)
+                for items in self.modsinfo_dic:
+                    objet_csv.writerow(
+                        [items, self.modsinfo_dic[items][0], self.modsinfo_dic[items][1],
+                         self.modsinfo_dic[items][2]])
+            return self.modsinfo_dic
         else:
-            self.mod_url = self.get_url(self.mod_id)
-        self.moddesc_lst.append(self.mod_moddesc)
-        self.moddesc_lst.append(self.mod_url)
-        self.moddesc_lst.append(self.path_modicon)
-        self.modsinfo_dic[self.mod_name] = self.moddesc_lst
-        # On crée le csv
-        with open(self.csvfile, "a", encoding="UTF-8", newline='') as fichier:
-            objet_csv = csv.writer(fichier)
-            for items in self.modsinfo_dic:
-                objet_csv.writerow(
-                    [items, self.modsinfo_dic[items][0], self.modsinfo_dic[items][1],
-                     self.modsinfo_dic[items][2]])
-        return self.modsinfo_dic
+            # print(f"[red]Le fichier ZIP {self.filepath} est invalide ou corrompu.[/red]") #  intutile car info pour pdf seulement
+            return None
 
     def get_url(self, modid):
         url = os.path.join(self.api_url, modid)
@@ -898,11 +953,11 @@ class GetInfo:
             return None
         except urllib.error.URLError as err_url:
             # Affiche de l'erreur si le lien n'est pas valide
-            print(f'[red]{LanguageChoice().error_msg}[/red]')
+            # # print(f'[red]{LanguageChoice().error_msg}[/red]')  # debug
             msg_error = f'{err_url.reason} : {self.test_url_mod}'
             write_log(msg_error)
         except KeyError:
-            print(f'[red]{LanguageChoice().error_msg}[/red]')
+            # # print(f'[red]{LanguageChoice().error_msg}[/red]')  # debug
             msg_error = traceback.format_exc()
             write_log(msg_error)
             sys.exit()
@@ -918,7 +973,7 @@ class MakePdf:
         self.mois = self.current_dateTime.strftime("%m")
         self.jour = self.current_dateTime.strftime("%d")
         # path
-        self.csvfile = Path('temp', 'csvtemp.csv')
+        self.csv_temp_file = Path('temp', 'csvtemp.csv')
 
     def makepdf(self):
         try:
@@ -931,6 +986,7 @@ class MakePdf:
             monpdf.set_auto_page_break(True, margin=10)
             monpdf.set_page_background((200, 215, 150))
             monpdf.add_page(same=True)
+            os.makedirs('Modslist', exist_ok=True)
             nom_fichier_pdf = f'VS_Mods_{self.annee}_{self.mois}_{self.jour}.pdf'
             monpdf.oversized_images = "DOWNSCALE"
             monpdf.oversized_images_ratio = 5
@@ -945,7 +1001,7 @@ class MakePdf:
                         new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C", fill=False)
             table_data = []
             # On remplit la liste table_data
-            with open(self.csvfile, newline='', encoding="utf-8", errors="replace") as csv_file:
+            with open(self.csv_temp_file, newline='', encoding="utf-8", errors="replace") as csv_file:
                 reader = csv.reader(csv_file, delimiter=',')
                 for ligne in reader:
                     table_data.append(ligne)
@@ -964,13 +1020,14 @@ class MakePdf:
                     monpdf.set_font("NotoSansCJKsc-Regular", '', size=7)
                     row.cell(ligne[1])
         except Exception:
-            print(f'[red]{LanguageChoice().error_msg}[/red]')
+            # print(f'[red]{LanguageChoice().error_msg}[/red]')  # debug
             msg_error = traceback.format_exc()
             write_log(msg_error)
             sys.exit()
 
         try:
-            monpdf.output(nom_fichier_pdf)
+            pdf_file_path = Path('Modslist', nom_fichier_pdf)
+            monpdf.output(pdf_file_path)
             print(f'\n\n\t\t[blue]{lang.makingpdfended}\n[/blue]')
         except PermissionError:
             print(f'[red]{lang.ErrorCreationPDF}[/red]')
@@ -1127,8 +1184,10 @@ if args.nopause == 'false' or args.makepdf == 'true':
                 print(
                     f'\t\t{LanguageChoice().addingmodsinprogress} {nb_mods_ok}/{nb_mods}',
                     end="\r")
-        pdf = MakePdf()
+
+        pdf = MakePdf()  # Passer directement les données à MakePdf
         pdf.makepdf()
+
         if args.makepdf == 'false':
             input(f'{LanguageChoice().exiting_script}')
     elif make_pdf == str(lang.no).lower() or make_pdf == str(
