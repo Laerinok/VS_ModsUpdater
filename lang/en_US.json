@@ -42,5 +42,6 @@
 	"pdfTitle" : "Installed mods",
 	"ErrorCreationPDF" : "Unable to create file. Check that it is not already open.",
 	"end_of_prg" : "ModsUpdater will now shut down.",
-	"error_msg" : "An error has occurred. Please consult the debug file."
+	"error_msg" : "An error has occurred. Please consult the debug file.",
+	"mod_path_failure": "Mods path does not exist or is not a directory"
 }

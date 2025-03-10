@@ -42,5 +42,6 @@
 	"pdfTitle" : "Liste des mods installés",
 	"ErrorCreationPDF" : "Impossible de créer le fichier. Vérifiez qu'il n'est pas déjà ouvert.",
 	"end_of_prg" : "ModsUpdater va maintenant se fermer.",
-	"error_msg" : "Une erreur s'est produite. Veuillez consulter le fichier de débogage."
+	"error_msg" : "Une erreur s'est produite. Veuillez consulter le fichier de débogage.",
+	"mod_path_failure": "Le chemin poru le mods n'existe pas ou n'est pas un répertoire"
 }
