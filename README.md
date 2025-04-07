@@ -1,3 +1,6 @@
+======================================================================
+# Permanently discontinued. See the new version [here](https://github.com/Laerinok/VS_ModsUpdater_v2).
+======================================================================
 # <p align="center">Vintage Story ModsUpdater</p>
 ### <p align="center">Easily update your favorite mods</p>
 <br><br>
