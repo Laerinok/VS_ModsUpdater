@@ -1085,28 +1085,11 @@ def datapath():
 
 
 # On récupère l'argument modspath
-def arg_modspath():
-    # On vérifie si le chemin contient des variables d'environnement
-    path_mods_raw = Path(args.modspath)
-    # On vérifie si la variable %appdata% (ou HOME) est dans le chemin et on la remplace par la variable systeme.
-    if my_os == 'Windows':
-        regex_path_mods = r'(%APPDATA%)(.*)'
-        var_env = os.getenv('appdata')
-    elif my_os == 'Linux':
-        regex_path_mods = r'(HOME)(.*)'
-        var_env = os.getenv('HOME')
-    else:
-        regex_path_mods = None
-        var_env = None
-    result_path_mods = re.search(regex_path_mods, str(path_mods_raw),
-                                 flags=re.IGNORECASE)
-    if result_path_mods:
-        part2 = result_path_mods.group(2)
-        part2 = part2[1:]  # On retire le 1er charactere (\ ou /)
-        arg_path_mods = Path(var_env, part2)
-    else:
-        arg_path_mods = path_mods_raw
-    return arg_path_mods
+def arg_modspath()
+    # On résoud les variables et la HOME dans le chemin
+    # Path n'a pas de méthode expandvars() malheureusement
+    # (https://bugs.python.org/issue21301)
+    return Path(os.path.expandvars(path_mods_raw.expanduser()))
 
 
 # On récupère le dossier des mods par argument, sinon on definit par defaut
