@@ -144,6 +144,7 @@ class LanguageChoice:
             self.ErrorCreationPDF = desc['ErrorCreationPDF']
             self.end_of_prg = desc['end_of_prg']
             self.error_msg = desc['error_msg']
+            self.mod_path_failure = desc['mod_path_failure']
 
         # On crée une liste pour les réponses O/N
         self.list_yesno = [self.yes.lower(), self.no.lower(), self.yes[0].lower(),
@@ -1145,6 +1146,8 @@ if path_mods.is_dir():
     inst.mods_list()
     inst.update_mods()
     inst.resume()
+else:
+    print(f'[red]{LanguageChoice().mod_path_failure}[/red] ({path_mods})\n')
 
 # Création du pdf (si argument nopause est false)
 if args.nopause == 'false' or args.makepdf == 'true':
